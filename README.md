@@ -47,7 +47,7 @@
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/Kibuye24/kenya-freight-rates.git
+git clone https://github.com/Marvinandru/kenya-freight-rates.git
 
 # Navigate to project directory
 cd kenya-freight-rates
