@@ -318,7 +318,7 @@ export const RatesProvider = ({ children }) => {
     setApprovalPromptShipment(null);
   };
 
-  const approveShipment = (shipmentId, paymentMethodChoice = 'Bank Wire') => {
+  const approveShipment = (shipmentId, paymentMethodChoice = 'USD Bank Wire') => {
     let targetShipment = null;
     setShipments(prev =>
       prev.map(shp => {
@@ -327,8 +327,8 @@ export const RatesProvider = ({ children }) => {
             ...shp,
             status: 'Approved • Advance Payment Pending',
             statusColor: 'emerald',
-            paymentStatus: paymentMethodChoice === 'Paid via Bank' ? 'Bank Transfer Initiated' : 'Pending Advance Payment',
-            paymentMethod: 'Bank Wire',
+            paymentStatus: paymentMethodChoice === 'USD Wire Sent' ? 'USD Bank Wire Initiated' : 'Pending Advance USD Wire',
+            paymentMethod: 'USD Bank Wire',
             approvedAt: formatProduceDate(new Date())
           };
           targetShipment = updated;
@@ -347,7 +347,7 @@ export const RatesProvider = ({ children }) => {
           origin: { y: 0.6 }
         });
       } catch (e) {}
-      showNotification(`Order for AWB ${targetShipment.awbNumber} approved! Please complete advance payment.`);
+      showNotification(`Order for AWB ${targetShipment.awbNumber} approved! Please complete advance USD bank payment.`);
     }
   };
 
@@ -359,8 +359,9 @@ export const RatesProvider = ({ children }) => {
             ...shp,
             status: 'Advance Payment Initiated / Verifying',
             statusColor: 'emerald',
-            paymentStatus: 'Bank Transfer Initiated',
-            bankReference: referenceNumber || `BANK-TX-${Date.now().toString().slice(-6)}`,
+            paymentStatus: 'USD Bank Wire Initiated',
+            paymentMethod: 'USD Bank Wire',
+            bankReference: referenceNumber || `USD-WIRE-${Date.now().toString().slice(-6)}`,
             paidAt: formatProduceDate(new Date())
           };
         }
@@ -374,7 +375,7 @@ export const RatesProvider = ({ children }) => {
         origin: { y: 0.6 }
       });
     } catch (e) {}
-    showNotification(`Bank transfer initiated! Our JKIA cargo accounts desk is verifying your payment.`, 'success');
+    showNotification(`USD bank wire recorded! Our JKIA cargo accounts desk is verifying your payment.`, 'success');
   };
 
   // Shipment & Document Functions
@@ -408,8 +409,8 @@ export const RatesProvider = ({ children }) => {
       flightDate: shipmentData.flightDate || 'Tomorrow',
       status: 'Approved • Advance Payment Pending',
       statusColor: 'emerald',
-      paymentStatus: 'Pending Advance Payment',
-      paymentMethod: 'Bank Wire',
+      paymentStatus: 'Pending Advance USD Wire',
+      paymentMethod: 'USD Bank Wire',
       approvedAt: formatProduceDate(new Date()),
       createdAt: 'Just Now',
       documents: [

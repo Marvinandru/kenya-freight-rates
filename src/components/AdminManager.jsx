@@ -349,7 +349,7 @@ export const AdminManager = () => {
                           {shp.status}
                         </span>
                         <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                          {shp.paymentStatus || 'Pending Advance Payment'}
+                          {shp.paymentStatus || 'Pending Advance USD Wire'}
                         </span>
                       </div>
                       <div className="text-slate-400 text-[11px]">

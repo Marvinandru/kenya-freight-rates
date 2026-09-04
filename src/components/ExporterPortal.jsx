@@ -323,10 +323,10 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                   <button
                     onClick={() => triggerApprovalNotice(activeShipment)}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm"
-                    title="View advance bank wire instructions and 3-day booking policy"
+                    title="View advance USD bank wire instructions and 3-day booking policy"
                   >
                     <CreditCard className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Advance Bank Info & Policy</span>
+                    <span>USD Bank Wire & Policy</span>
                   </button>
 
                   <button
@@ -581,7 +581,7 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                 <Calendar className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-white block">3-Day Advance Quoting Policy:</span>
-                  Please request quotes and confirm bookings at least 3 days in advance to be assured of flight space. All payments must be completed in advance via bank transfer prior to cold-store intake.
+                  Please request quotes and confirm bookings at least 3 days in advance to be assured of flight space. All payments must be completed in advance via USD bank wire prior to cold-store intake.
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">

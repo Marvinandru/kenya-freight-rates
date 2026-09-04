@@ -464,7 +464,7 @@ export const RateCalculator = () => {
             </div>
             <div className="flex items-center gap-1.5 text-amber-300 font-mono text-[11px] shrink-0 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>100% Advance Payment via Bank</span>
+              <span>100% Advance Payment via USD Bank Wire</span>
             </div>
           </div>
 

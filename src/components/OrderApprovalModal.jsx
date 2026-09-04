@@ -12,9 +12,7 @@ import {
   Plane, 
   Clock, 
   ShieldCheck, 
-  ExternalLink,
-  ChevronRight,
-  Info
+  DollarSign
 } from 'lucide-react';
 
 export const OrderApprovalModal = () => {
@@ -23,12 +21,9 @@ export const OrderApprovalModal = () => {
     isApprovalModalOpen, 
     closeApprovalNotice, 
     recordBankPayment, 
-    currencyMode,
-    exchangeRate,
     showNotification 
   } = useRates();
 
-  const [paymentChoice, setPaymentChoice] = useState('pay_now'); // 'pay_now' | 'pay_later'
   const [bankRefInput, setBankRefInput] = useState('');
   const [copiedField, setCopiedField] = useState(null);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -39,12 +34,8 @@ export const OrderApprovalModal = () => {
 
   const shp = approvalPromptShipment;
 
-  const formatPrice = (usdAmount) => {
-    if (currencyMode === 'KES') {
-      const kes = Math.round(usdAmount * exchangeRate);
-      return `KES ${kes.toLocaleString()}`;
-    }
-    return `$${Number(usdAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+  const formatUSD = (amount) => {
+    return `$${Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
   };
 
   const handleCopy = (text, fieldName) => {
@@ -58,15 +49,10 @@ export const OrderApprovalModal = () => {
     e.preventDefault();
     setIsSubmittingPayment(true);
     setTimeout(() => {
-      recordBankPayment(shp.id, bankRefInput.trim() || `BANK-WIRE-${shp.awbNumber}`);
+      recordBankPayment(shp.id, bankRefInput.trim() || `USD-WIRE-${shp.awbNumber}`);
       setIsSubmittingPayment(false);
       closeApprovalNotice();
     }, 400);
-  };
-
-  const handleConfirmPayLater = () => {
-    showNotification(`Booking confirmed! Remember: Advance payment must be completed before flight departure.`, 'info');
-    closeApprovalNotice();
   };
 
   return (
@@ -107,9 +93,9 @@ export const OrderApprovalModal = () => {
           </button>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto text-xs">
+        <div className="p-6 space-y-5 max-h-[78vh] overflow-y-auto text-xs pr-2">
 
-          {/* Quick Shipment Summary Strip */}
+          {/* Quick Shipment Summary Strip in USD */}
           <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
             <div>
               <span className="text-slate-500 block text-[10px]">Chargeable Weight</span>
@@ -117,15 +103,15 @@ export const OrderApprovalModal = () => {
             </div>
             <div>
               <span className="text-slate-500 block text-[10px]">All-In Rate</span>
-              <span className="text-emerald-400 font-bold text-sm">{formatPrice(shp.quotedRatePerKg)}/KG</span>
+              <span className="text-emerald-400 font-bold text-sm">{formatUSD(shp.quotedRatePerKg)}/KG</span>
             </div>
             <div>
               <span className="text-slate-500 block text-[10px]">Flight Departure</span>
               <span className="text-teal-300 font-bold text-sm">{shp.flightDate}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[10px]">Total Order Due</span>
-              <span className="text-emerald-300 font-bold text-sm">{formatPrice(shp.grandTotalUSD)}</span>
+              <span className="text-slate-500 block text-[10px]">Total Due (USD)</span>
+              <span className="text-emerald-300 font-bold text-sm">{formatUSD(shp.grandTotalUSD)}</span>
             </div>
           </div>
 
@@ -140,7 +126,7 @@ export const OrderApprovalModal = () => {
                   <span>Crucial Booking Notice: 3 Days Advance Quoting</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-slate-300">
-                  Please note that fresh produce cargo space out of <strong>JKIA Nairobi (NBO)</strong> is allocated on a strictly scheduled basis with partner airlines. Exporters must <strong className="text-sky-300">request quotes and confirm bookings at least 3 days in advance</strong> to guarantee aircraft space allocations and cold-chain intake during peak export seasons.
+                  Please note that fresh produce cargo space out of <strong>JKIA Nairobi (NBO)</strong> is allocated on a strictly scheduled basis with partner airlines. Exporters must <strong className="text-sky-300">request quotes and confirm bookings at least 3 days in advance</strong> to be assured of booking space and cold-chain intake during peak export seasons.
                 </p>
               </div>
             </div>
@@ -157,209 +143,111 @@ export const OrderApprovalModal = () => {
                   <span>Mandatory Policy: 100% Advance Payment Required</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-slate-300">
-                  Please note that <strong className="text-amber-300">payments should be done in advance</strong>. Freight charges and terminal handling fees must be cleared prior to cargo acceptance at the JKIA perishable cold-store and before original Air Waybills (BL) are released for export customs.
+                  Please note that <strong className="text-amber-300">payments should be done in advance</strong>. All freight charges must be cleared via bank transfer prior to cargo acceptance at the JKIA perishable cold-store and before original Air Waybills (BL) are released for export customs.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* QUESTION: WILL YOU PAY NOW VIA A BANK? */}
+          {/* USD BANK TRANSFER PAYMENT SECTION */}
           <div className="bg-slate-950/90 p-5 rounded-2xl border border-slate-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <div>
                 <div className="text-sm font-bold text-white flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-emerald-400" />
-                  <span>Will you pay now via a bank transfer?</span>
+                  <Building2 className="w-4 h-4 text-emerald-400" />
+                  <span>Advance Payment via Bank (USD Only)</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Select your preferred settlement arrangement for this produce shipment.
+                  Payments are accepted strictly in USD via bank wire transfer to our JKIA freight account.
                 </p>
               </div>
 
-              {/* Toggle Buttons */}
-              <div className="inline-flex rounded-xl bg-slate-900 p-1 border border-slate-800 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setPaymentChoice('pay_now')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                    paymentChoice === 'pay_now'
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Pay Now via Bank
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentChoice('pay_later')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                    paymentChoice === 'pay_later'
-                      ? 'bg-slate-800 text-amber-300 shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Pay Later
-                </button>
-              </div>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold shrink-0 self-start sm:self-center">
+                USD BANK WIRE ONLY
+              </span>
             </div>
 
-            {/* CHOICE A: PAY NOW VIA BANK (DETAILS DISPLAY) */}
-            {paymentChoice === 'pay_now' && (
-              <div className="space-y-4 pt-1 animate-fade-in">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5" />
-                    Official JKIA Freight Bank Accounts
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    Ref Code: <strong className="text-emerald-300">{shp.awbNumber}</strong>
-                  </span>
+            {/* Official USD Bank Wire Account Card */}
+            <div className="bg-slate-900/95 p-4 rounded-2xl border border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-emerald-400" />
+                  <span className="font-bold text-white text-sm">KCB Bank Kenya Ltd</span>
                 </div>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                  Official USD Account
+                </span>
+              </div>
 
-                {/* Bank Account Details Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  
-                  {/* Account 1: USD Wire Account */}
-                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white text-xs">KCB Bank Kenya Ltd</span>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono">
-                        USD Account
-                      </span>
-                    </div>
-                    <div className="space-y-1 font-mono text-[11px]">
-                      <div className="text-slate-400 flex justify-between">
-                        <span>Account Name:</span>
-                        <span className="text-slate-200">AeroProduce Kenya Cargo</span>
-                      </div>
-                      <div className="text-slate-400 flex justify-between">
-                        <span>Account No:</span>
-                        <span className="text-white font-bold">1294 8839 2011</span>
-                      </div>
-                      <div className="text-slate-400 flex justify-between">
-                        <span>SWIFT Code:</span>
-                        <span className="text-slate-200">KCBLKENX</span>
-                      </div>
-                      <div className="text-slate-400 flex justify-between">
-                        <span>Branch:</span>
-                        <span className="text-slate-200">JKIA Cargo Terminal</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy('KCB Bank Kenya | Acc: 1294 8839 2011 (USD) | SWIFT: KCBLKENX | Ref: ' + shp.awbNumber, 'KCB USD Wire Details')}
-                      className="w-full mt-2 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center gap-1 text-[11px] transition-all"
-                    >
-                      {copiedField === 'KCB USD Wire Details' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedField === 'KCB USD Wire Details' ? 'Copied Details!' : 'Copy USD Details'}</span>
-                    </button>
-                  </div>
-
-                  {/* Account 2: KES Local / Paybill Account */}
-                  <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white text-xs">Equity Bank Kenya</span>
-                      <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[10px] font-mono">
-                        KES / MPESA
-                      </span>
-                    </div>
-                    <div className="space-y-1 font-mono text-[11px]">
-                      <div className="text-slate-400 flex justify-between">
-                        <span>Account Name:</span>
-                        <span className="text-slate-200">AeroProduce Kenya Ltd</span>
-                      </div>
-                      <div className="text-slate-400 flex justify-between">
-                        <span>Account No:</span>
-                        <span className="text-white font-bold">0180 2938 4920 11</span>
-                      </div>
-                      <div className="text-slate-400 flex justify-between">
-                        <span>MPESA Paybill:</span>
-                        <span className="text-emerald-400 font-bold">247247</span>
-                      </div>
-                      <div className="text-slate-400 flex justify-between">
-                        <span>Account Ref:</span>
-                        <span className="text-white font-bold">{shp.awbNumber}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy('Equity Bank Kenya | Acc: 0180 2938 4920 11 (KES) | Paybill: 247247 | Ref: ' + shp.awbNumber, 'Equity KES / Paybill Details')}
-                      className="w-full mt-2 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center gap-1 text-[11px] transition-all"
-                    >
-                      {copiedField === 'Equity KES / Paybill Details' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedField === 'Equity KES / Paybill Details' ? 'Copied Details!' : 'Copy KES / Paybill'}</span>
-                    </button>
-                  </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[11px] bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Beneficiary Name:</span>
+                  <span className="text-white font-bold">AeroProduce Kenya Cargo</span>
                 </div>
-
-                {/* Form to submit confirmation */}
-                <form onSubmit={handleConfirmBankPayment} className="pt-2 space-y-3">
+                <div>
+                  <span className="text-slate-500 block text-[10px]">USD Account Number:</span>
+                  <span className="text-emerald-400 font-extrabold text-sm">1294 8839 2011</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">SWIFT / BIC Code:</span>
+                  <span className="text-teal-300 font-bold">KCBLKENX</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Branch:</span>
+                  <span className="text-slate-300">JKIA Cargo Terminal, Nairobi</span>
+                </div>
+                <div className="sm:col-span-2 pt-2 border-t border-slate-800/80 flex flex-wrap justify-between items-center gap-1">
                   <div>
-                    <label className="block text-slate-300 font-medium mb-1">
-                      Bank Transfer Reference / Transaction Code (Optional):
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. FT2609048821 or MPESA Code QHB87261"
-                      value={bankRefInput}
-                      onChange={(e) => setBankRefInput(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
-                    />
+                    <span className="text-slate-500 block text-[10px]">Payment Reference / Remittance Code:</span>
+                    <span className="text-amber-300 font-bold text-xs">{shp.awbNumber}</span>
                   </div>
-
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <button
-                      type="button"
-                      onClick={closeApprovalNotice}
-                      className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-all"
-                    >
-                      Dismiss & Pay Later
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmittingPayment}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all active:scale-98"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>{isSubmittingPayment ? 'Recording Payment...' : 'I Have Paid via Bank Transfer'}</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* CHOICE B: PAY LATER (BEFORE LOADING) */}
-            {paymentChoice === 'pay_later' && (
-              <div className="space-y-4 pt-1 animate-fade-in text-slate-300">
-                <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-amber-300 font-semibold">
-                    <Clock className="w-4 h-4" />
-                    <span>Advance Payment Commitment Timeline</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    You have chosen to pay later. Please ensure your bank transfer is executed and proof of payment sent to <strong>marvoodi@gmail.com</strong> at least <strong>24 hours prior to scheduled flight loading ({shp.flightDate})</strong>. Unfunded bookings cannot be accepted at the JKIA cold chain terminal.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentChoice('pay_now')}
-                    className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-all"
-                  >
-                    Switch to Pay Now via Bank
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleConfirmPayLater}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-all text-center"
-                  >
-                    Acknowledge & Confirm Booking
-                  </button>
+                  <span className="text-[10px] text-slate-400 italic">Mandatory for wire matching</span>
                 </div>
               </div>
-            )}
+
+              <button
+                type="button"
+                onClick={() => handleCopy('KCB Bank Kenya Ltd | USD Account: 1294 8839 2011 | SWIFT: KCBLKENX | Branch: JKIA Cargo Terminal | Reference: ' + shp.awbNumber, 'KCB USD Wire Details')}
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center gap-1.5 text-xs font-semibold transition-all border border-slate-700 active:scale-98"
+              >
+                {copiedField === 'KCB USD Wire Details' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedField === 'KCB USD Wire Details' ? 'Copied USD Wire Details!' : 'Copy USD Bank Wire Details'}</span>
+              </button>
+            </div>
+
+            {/* Form to submit USD wire confirmation */}
+            <form onSubmit={handleConfirmBankPayment} className="pt-1 space-y-3">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">
+                  USD Bank Wire Reference / Swift MT103 Code (Optional):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. FT2609048821 or Bank Wire Swift Ref"
+                  value={bankRefInput}
+                  onChange={(e) => setBankRefInput(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={closeApprovalNotice}
+                  className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-semibold transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPayment}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all active:scale-98"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isSubmittingPayment ? 'Recording Wire...' : 'Confirm USD Bank Transfer Sent'}</span>
+                </button>
+              </div>
+            </form>
 
           </div>
 
@@ -369,7 +257,7 @@ export const OrderApprovalModal = () => {
         <div className="px-6 py-3 border-t border-slate-800/80 bg-slate-950/80 flex items-center justify-between text-[11px] text-slate-400">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>JKIA Fresh Produce Cold Chain Hub • Guaranteed Space Policy</span>
+            <span>JKIA Fresh Produce Cold Chain Hub • 3 Days Advance Quote Policy</span>
           </div>
           <button
             onClick={closeApprovalNotice}
