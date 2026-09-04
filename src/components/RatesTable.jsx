@@ -20,18 +20,23 @@ import {
   Leaf,
   ThermometerSnowflake,
   ShieldCheck,
-  FolderLock
+  FolderLock,
+  RefreshCw,
+  Calendar
 } from 'lucide-react';
 import { DESTINATION_REGIONS } from '../data/initialRates';
 
 export const RatesTable = () => {
   const { 
     rates, 
+    lastUpdated,
+    refreshToToday,
+    isRefreshing,
     airlines, 
     airports, 
     commodities, 
     currencyMode, 
-    exchangeRate,
+    exchangeRate, 
     profitMarginPerKg,
     getSellingRate,
     setSelectedRouteForCalc,
@@ -120,7 +125,7 @@ export const RatesTable = () => {
       <div className="glass-panel p-5 rounded-2xl mb-6 shadow-xl border border-slate-800">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-emerald-400" />
                 Fresh Produce Air Freight Rates Matrix (USD/KG)
@@ -128,6 +133,18 @@ export const RatesTable = () => {
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
                 +${profitMarginPerKg.toFixed(2)}/kg Margin Included
               </span>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-slate-300">
+                <Clock className="w-3 h-3 text-emerald-400" />
+                <span>Rates Valid: <strong className="text-emerald-300 font-semibold">{lastUpdated}</strong></span>
+                <button
+                  onClick={() => refreshToToday(true)}
+                  title="Click to refresh to today's date & live rates"
+                  aria-label="Refresh to today's date"
+                  className="inline-flex items-center justify-center p-0.5 rounded text-emerald-400 hover:text-white hover:bg-emerald-500/20 active:scale-90 transition-all ml-0.5 group focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                >
+                  <RefreshCw className={`w-3 h-3 transition-transform duration-500 ${isRefreshing ? 'animate-spin text-emerald-300' : 'group-hover:rotate-180'}`} />
+                </button>
+              </div>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Verified daily export spot rates for Avocados, Soya Beans, Chillies, Herbs & Tropicals out of JKIA Nairobi.

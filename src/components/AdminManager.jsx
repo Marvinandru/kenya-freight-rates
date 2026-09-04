@@ -44,7 +44,7 @@ export const AdminManager = () => {
     showNotification 
   } = useRates();
 
-  const [activeSubTab, setActiveSubTab] = useState('inline'); // 'inline' | 'profit' | 'shipments' | 'bulk' | 'csv'
+  const [activeSubTab, setActiveSubTab] = useState('inline'); // 'inline' | 'profit' | 'shipments' | 'bulk'
   const [marginInput, setMarginInput] = useState(profitMarginPerKg);
 
   // Bulk Adjust State
@@ -157,6 +157,7 @@ export const AdminManager = () => {
             <Sliders className="w-3.5 h-3.5" />
             Bulk Rate Adjuster
           </button>
+
         </div>
 
         {/* Tab Body */}
@@ -416,6 +417,7 @@ export const AdminManager = () => {
               </div>
             </div>
           )}
+
         </div>
 
         {/* Footer */}

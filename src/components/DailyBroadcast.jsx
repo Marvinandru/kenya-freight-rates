@@ -12,11 +12,13 @@ import {
   FileText, 
   Calendar, 
   Layers,
-  Leaf
+  Leaf,
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 
 export const DailyBroadcast = () => {
-  const { rates, lastUpdated, airlines, airports, commodities, showNotification } = useRates();
+  const { rates, lastUpdated, refreshToToday, isRefreshing, airlines, airports, commodities, showNotification } = useRates();
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
   const [broadcastCategory, setBroadcastCategory] = useState('avocados'); // 'avocados' | 'soya_beans' | 'chillies' | 'all'
 
@@ -127,17 +129,29 @@ export const DailyBroadcast = () => {
                 WhatsApp / Telegram Produce Bulletin Preview
               </h3>
 
-              {/* Filter */}
-              <select
-                value={broadcastCategory}
-                onChange={(e) => setBroadcastCategory(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
-              >
-                <option value="avocados">🥑 Fresh Avocados</option>
-                <option value="soya_beans">🫘 Soya Beans & Legumes</option>
-                <option value="chillies">🌶️ Fresh Chillies</option>
-                <option value="all">🌍 All Fresh Produce Lanes</option>
-              </select>
+              {/* Controls */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={broadcastCategory}
+                  onChange={(e) => setBroadcastCategory(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
+                >
+                  <option value="avocados">🥑 Fresh Avocados</option>
+                  <option value="soya_beans">🫘 Soya Beans & Legumes</option>
+                  <option value="chillies">🌶️ Fresh Chillies</option>
+                  <option value="all">🌍 All Fresh Produce Lanes</option>
+                </select>
+
+                <button
+                  onClick={() => refreshToToday(true)}
+                  title="Click to refresh to today's date"
+                  aria-label="Refresh to today's date"
+                  className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-emerald-400 hover:text-white text-xs rounded-lg px-2.5 py-1.5 transition-all group"
+                >
+                  <RefreshCw className={`w-3 h-3 transition-transform duration-500 ${isRefreshing ? 'animate-spin text-emerald-300' : 'group-hover:rotate-180'}`} />
+                  <span className="hidden sm:inline font-medium">Refresh Date</span>
+                </button>
+              </div>
             </div>
 
             {/* Mock WhatsApp Chat Bubble */}
@@ -172,7 +186,17 @@ export const DailyBroadcast = () => {
               </div>
               <div className="text-right text-[11px] font-mono text-slate-400">
                 <span className="text-emerald-400 font-bold block">VALID TODAY</span>
-                <span>{lastUpdated}</span>
+                <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                  <span className="text-slate-200">{lastUpdated}</span>
+                  <button
+                    onClick={() => refreshToToday(true)}
+                    title="Click to refresh to today's date"
+                    aria-label="Refresh to today's date"
+                    className="inline-flex items-center justify-center p-1 rounded text-emerald-400 hover:text-white hover:bg-emerald-500/20 active:scale-90 transition-all group focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  >
+                    <RefreshCw className={`w-3 h-3 transition-transform duration-500 ${isRefreshing ? 'animate-spin text-emerald-300' : 'group-hover:rotate-180'}`} />
+                  </button>
+                </div>
               </div>
             </div>
 

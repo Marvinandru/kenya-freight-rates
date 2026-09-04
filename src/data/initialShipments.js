@@ -1,4 +1,13 @@
 // Initial sample shipments & documents for Kenyan Produce Exporters
+export const getRelativeDateStr = (offsetDays = 0) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const INITIAL_SHIPMENTS = [
   {
     id: 'SHP-NBO-AMS-701',
@@ -19,10 +28,10 @@ export const INITIAL_SHIPMENTS = [
     totalProfitUSD: 360.00, // 1800 * 0.20
     grandTotalUSD: 4626.00,
     flightNumber: 'KQ 116',
-    flightDate: '2026-09-04',
+    flightDate: getRelativeDateStr(0),
     status: 'In Cold Store / Cleared',
     statusColor: 'emerald',
-    createdAt: '2026-09-03 09:30 EAT',
+    createdAt: `${getRelativeDateStr(-1)} 09:30 EAT`,
     documents: [
       {
         id: 'DOC-AWB-701',
@@ -89,10 +98,10 @@ export const INITIAL_SHIPMENTS = [
     totalProfitUSD: 240.00,
     grandTotalUSD: 3384.00,
     flightNumber: '8V 402F',
-    flightDate: '2026-09-05',
+    flightDate: getRelativeDateStr(1),
     status: 'KEPHIS Inspection Passed',
     statusColor: 'sky',
-    createdAt: '2026-09-02 14:20 EAT',
+    createdAt: `${getRelativeDateStr(-2)} 14:20 EAT`,
     documents: [
       {
         id: 'DOC-AWB-804',
@@ -148,10 +157,10 @@ export const INITIAL_SHIPMENTS = [
     totalProfitUSD: 130.00,
     grandTotalUSD: 1384.50,
     flightNumber: 'EK 720',
-    flightDate: '2026-09-04',
+    flightDate: getRelativeDateStr(0),
     status: 'Ready for Loading',
     statusColor: 'amber',
-    createdAt: '2026-09-03 08:15 EAT',
+    createdAt: `${getRelativeDateStr(-1)} 08:15 EAT`,
     documents: [
       {
         id: 'DOC-AWB-920',

@@ -13,11 +13,13 @@ import {
   Calendar, 
   Layers, 
   ArrowUpRight,
-  Leaf
+  Leaf,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 
 export const MarketInsights = () => {
-  const { airlines } = useRates();
+  const { airlines, lastUpdated, refreshToToday, isRefreshing } = useRates();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -38,10 +40,24 @@ export const MarketInsights = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Market Bulletins */}
         <div className="lg:col-span-7 space-y-4">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-emerald-400" />
-            Today’s Fresh Produce Advisories
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-emerald-400" />
+              Today’s Fresh Produce Advisories
+            </h3>
+            <div className="flex items-center gap-1.5 font-mono text-xs text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800">
+              <Clock className="w-3 h-3 text-emerald-400" />
+              <span>Valid: <strong className="text-emerald-300 font-medium">{lastUpdated}</strong></span>
+              <button
+                onClick={() => refreshToToday(true)}
+                title="Click to refresh to today's date"
+                aria-label="Refresh to today's date"
+                className="inline-flex items-center justify-center p-0.5 rounded text-emerald-400 hover:text-white hover:bg-emerald-500/20 active:scale-90 transition-all ml-0.5 group focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              >
+                <RefreshCw className={`w-3 h-3 transition-transform duration-500 ${isRefreshing ? 'animate-spin text-emerald-300' : 'group-hover:rotate-180'}`} />
+              </button>
+            </div>
+          </div>
 
           <div className="space-y-4">
             {MARKET_BULLETINS.map(item => (
@@ -53,7 +69,9 @@ export const MarketInsights = () => {
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     {item.badge}
                   </span>
-                  <span className="text-[11px] font-mono text-slate-400">{item.date}</span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {item.id === 1 ? `Valid ${lastUpdated}` : item.date}
+                  </span>
                 </div>
 
                 <h4 className="text-base font-bold text-white mb-2">{item.title}</h4>

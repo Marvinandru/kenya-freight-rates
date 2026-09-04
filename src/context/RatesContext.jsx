@@ -10,8 +10,51 @@ const SHIPMENTS_KEY = 'aero_produce_shipments_v1';
 const CLIENTS_KEY = 'aero_produce_clients_v1';
 const AUTH_KEY = 'aero_produce_auth_user_v1';
 const PROFIT_KEY = 'aero_produce_profit_margin_v1';
-const LAST_UPDATED_KEY = 'aero_produce_last_updated_v3';
+const TODAY_KEY = 'aero_produce_today_key_v2';
+const LAST_UPDATED_KEY = 'aero_produce_last_updated_v4';
+
 const EXCHANGE_RATE_USD_KES = 129.50;
+
+// Nairobi East Africa Time format: e.g. "4 Sept 2026, 12:45 EAT"
+export const formatProduceDate = (date = new Date()) => {
+  try {
+    return new Intl.DateTimeFormat('en-KE', { 
+      timeZone: 'Africa/Nairobi',
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date) + ' EAT';
+  } catch (e) {
+    return date.toLocaleDateString('en-KE', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ' EAT';
+  }
+};
+
+// Nairobi day key format: e.g. "2026-09-04"
+export const getTodayKeyNairobi = (date = new Date()) => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(date);
+  } catch (e) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+};
+
+export const isDateToday = (timestampOrDate) => {
+  if (!timestampOrDate) return false;
+  const target = new Date(Number(timestampOrDate));
+  if (isNaN(target.getTime())) return false;
+  return getTodayKeyNairobi(target) === getTodayKeyNairobi(new Date());
+};
 
 export const RatesProvider = ({ children }) => {
   // Profit Margin per KG (Default $0.20 USD for business owner)
@@ -66,20 +109,34 @@ export const RatesProvider = ({ children }) => {
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [lastUpdated, setLastUpdated] = useState(() => {
+    // 1. Clean legacy stale keys from previous releases
     try {
-      const saved = localStorage.getItem(LAST_UPDATED_KEY);
-      if (saved) return saved;
+      localStorage.removeItem('aero_produce_last_updated_v3');
+      localStorage.removeItem('aero_produce_last_updated_v2');
+      localStorage.removeItem('aero_produce_last_updated_v1');
+      localStorage.removeItem('aero_produce_last_updated_ts_v1');
     } catch (e) {}
-    const today = new Date();
-    return today.toLocaleDateString('en-KE', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }) + ' EAT';
+
+    // 2. Check if a date was stored for TODAY in Nairobi
+    try {
+      const savedTodayKey = localStorage.getItem(TODAY_KEY);
+      const currentTodayKey = getTodayKeyNairobi();
+      const savedDate = localStorage.getItem(LAST_UPDATED_KEY);
+      if (savedTodayKey === currentTodayKey && savedDate) {
+        return savedDate;
+      }
+    } catch (e) {}
+
+    // 3. Otherwise, always freshly generate today's live date in Nairobi time
+    const fresh = formatProduceDate(new Date());
+    try {
+      localStorage.setItem(TODAY_KEY, getTodayKeyNairobi());
+      localStorage.setItem(LAST_UPDATED_KEY, fresh);
+    } catch (e) {}
+    return fresh;
   });
 
   const [currencyMode, setCurrencyMode] = useState('USD');
@@ -89,6 +146,66 @@ export const RatesProvider = ({ children }) => {
   const [selectedRouteForHistory, setSelectedRouteForHistory] = useState(null);
   const [selectedShipmentForModal, setSelectedShipmentForModal] = useState(null);
   const [notification, setNotification] = useState(null);
+
+  // Manual & automatic refresh to today's date
+  const refreshToToday = (showToast = true) => {
+    setIsRefreshing(true);
+    const now = new Date();
+    const formatted = formatProduceDate(now);
+    const currentTodayKey = getTodayKeyNairobi(now);
+
+    setLastUpdated(formatted);
+    try {
+      localStorage.setItem(TODAY_KEY, currentTodayKey);
+      localStorage.setItem(LAST_UPDATED_KEY, formatted);
+      // Clean up any legacy keys
+      localStorage.removeItem('aero_produce_last_updated_v3');
+      localStorage.removeItem('aero_produce_last_updated_ts_v1');
+    } catch (e) {}
+
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 600);
+
+    if (showToast) {
+      showNotification(`Rates & validity date refreshed to today: ${formatted}`, 'success');
+    }
+    return formatted;
+  };
+
+  // Day rollover detection & auto-refresh (re-checks when tab focuses or date crosses midnight)
+  useEffect(() => {
+    const checkAndSyncToday = () => {
+      try {
+        const savedTodayKey = localStorage.getItem(TODAY_KEY);
+        const currentTodayKey = getTodayKeyNairobi();
+        if (savedTodayKey !== currentTodayKey) {
+          refreshToToday(false);
+        }
+      } catch (e) {
+        refreshToToday(false);
+      }
+    };
+
+    // Immediate check on mount
+    checkAndSyncToday();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkAndSyncToday();
+      }
+    };
+
+    window.addEventListener('focus', checkAndSyncToday);
+    document.addEventListener('visibilitychange', handleVisibility);
+    const interval = setInterval(checkAndSyncToday, 30 * 1000);
+
+    return () => {
+      window.removeEventListener('focus', checkAndSyncToday);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Persistence
   useEffect(() => {
@@ -120,12 +237,6 @@ export const RatesProvider = ({ children }) => {
       localStorage.setItem(PROFIT_KEY, profitMarginPerKg.toString());
     } catch (e) {}
   }, [profitMarginPerKg]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(LAST_UPDATED_KEY, lastUpdated);
-    } catch (e) {}
-  }, [lastUpdated]);
 
   const showNotification = (msg, type = 'success') => {
     setNotification({ msg, type, id: Date.now() });
@@ -392,15 +503,7 @@ export const RatesProvider = ({ children }) => {
   };
 
   const publishDailyRates = () => {
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('en-KE', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }) + ' EAT';
-    setLastUpdated(formattedDate);
+    const formattedDate = refreshToToday(false);
 
     try {
       confetti({
@@ -430,6 +533,9 @@ export const RatesProvider = ({ children }) => {
       value={{
         rates,
         lastUpdated,
+        refreshToToday,
+        isRefreshing,
+        formatProduceDate,
         currencyMode,
         setCurrencyMode,
         exchangeRate: EXCHANGE_RATE_USD_KES,
