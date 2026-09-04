@@ -15,7 +15,10 @@ import {
   Award,
   Download,
   Leaf,
-  ThermometerSnowflake
+  ThermometerSnowflake,
+  Calendar,
+  AlertTriangle,
+  CreditCard
 } from 'lucide-react';
 
 export const RateCalculator = () => {
@@ -28,6 +31,7 @@ export const RateCalculator = () => {
     exchangeRate,
     selectedRouteForCalc,
     setSelectedRouteForCalc,
+    createShipment,
     showNotification 
   } = useRates();
 
@@ -452,6 +456,18 @@ export const RateCalculator = () => {
             </span>
           </div>
 
+          {/* 3 Days Space Assurance & Advance Payment Advisory */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-sky-950/60 via-slate-900 to-amber-950/50 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-slate-300">
+            <div className="flex items-center gap-2 text-sky-300 font-medium">
+              <Calendar className="w-4 h-4 text-sky-400 shrink-0" />
+              <span><strong>Crucial Space Rule:</strong> Request quotes & book at least 3 days in advance for guaranteed JKIA flight capacity.</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-amber-300 font-mono text-[11px] shrink-0 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>100% Advance Payment via Bank</span>
+            </div>
+          </div>
+
           {matchedCarriers.length === 0 ? (
             <div className="glass-panel p-8 rounded-2xl border border-slate-800 text-center">
               <Leaf className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -537,23 +553,49 @@ export const RateCalculator = () => {
                     </div>
 
                     {/* Action Bar */}
-                    <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
                       <div className="text-[11px] text-slate-400 flex items-center gap-1">
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                         <span>Valid for Today’s Produce Booking</span>
                       </div>
 
-                      <button
-                        onClick={() => handleCopyQuote(carrier)}
-                        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-semibold text-xs transition-all ${
-                          isCopied
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20'
-                        }`}
-                      >
-                        {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                        {isCopied ? 'Copied Produce Quote!' : 'Copy Produce Quotation'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleCopyQuote(carrier)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
+                            isCopied
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                          }`}
+                        >
+                          {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          {isCopied ? 'Copied Quote!' : 'Copy Quotation'}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            createShipment({
+                              origin,
+                              destination,
+                              commodity,
+                              commodityName: commodityConfig.name,
+                              airlineId: carrier.id,
+                              airlineName: carrier.name,
+                              airlineCode: carrier.code,
+                              grossWeight,
+                              chargeableWeight,
+                              baseRatePerKg: carrier.applicableRate,
+                              grandTotalUSD: carrier.grandTotalUSD,
+                              flightDate: '3 Days Ahead (Space Confirmed)'
+                            }, true);
+                          }}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/30 transition-all active:scale-95"
+                          title="Place order and confirm booking with advance payment prompt"
+                        >
+                          <Plane className="w-3.5 h-3.5" />
+                          <span>Book Space / Place Order</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

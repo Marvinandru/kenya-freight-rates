@@ -18,7 +18,10 @@ import {
   TrendingUp,
   FolderLock,
   Building2,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2,
+  CreditCard,
+  Calendar
 } from 'lucide-react';
 
 export const AdminManager = () => {
@@ -32,6 +35,8 @@ export const AdminManager = () => {
     profitMarginPerKg, 
     setProfitMarginPerKg,
     shipments,
+    approveShipment,
+    triggerApprovalNotice,
     clients,
     totalTonnageKg,
     totalProfitEarnedUSD,
@@ -336,26 +341,48 @@ export const AdminManager = () => {
               <div className="space-y-3">
                 {shipments.map(shp => (
                   <div key={shp.id} className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono font-bold text-emerald-400">AWB: {shp.awbNumber}</span>
                         <span className="font-bold text-white">({shp.clientCompany})</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold bg-${shp.statusColor}-500/10 text-${shp.statusColor}-400 border border-${shp.statusColor}-500/20`}>
                           {shp.status}
                         </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                          {shp.paymentStatus || 'Pending Advance Payment'}
+                        </span>
                       </div>
                       <div className="text-slate-400 text-[11px]">
                         {shp.commodityName} • {shp.origin} ➔ {shp.destination} • {shp.chargeableWeight} KG via {shp.airlineName}
                       </div>
-                      <div className="text-[11px] text-emerald-400 font-semibold mt-1">
+                      <div className="text-[11px] text-emerald-400 font-semibold">
                         Attached Docs: {shp.documents.map(d => d.name.split(' (')[0]).join(', ')}
                       </div>
                     </div>
 
-                    <div className="text-right font-mono">
-                      <div className="text-[10px] text-slate-500">Your Profit on Booking:</div>
-                      <div className="text-base font-bold text-emerald-400">+${shp.totalProfitUSD || (shp.chargeableWeight * profitMarginPerKg).toFixed(2)} USD</div>
-                      <div className="text-[10px] text-slate-400">Total: {formatPrice(shp.grandTotalUSD)}</div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right font-mono">
+                        <div className="text-[10px] text-slate-500">Your Profit on Booking:</div>
+                        <div className="text-base font-bold text-emerald-400">+${shp.totalProfitUSD || (shp.chargeableWeight * profitMarginPerKg).toFixed(2)} USD</div>
+                        <div className="text-[10px] text-slate-400">Total: {formatPrice(shp.grandTotalUSD)}</div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <button
+                          onClick={() => approveShipment(shp.id)}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] flex items-center gap-1 shadow-sm transition-all"
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Approve & Notice</span>
+                        </button>
+                        <button
+                          onClick={() => triggerApprovalNotice(shp)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-[11px] flex items-center gap-1 transition-all"
+                        >
+                          <CreditCard className="w-3 h-3" />
+                          <span>View Bank Wire</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

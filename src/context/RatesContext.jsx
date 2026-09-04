@@ -304,8 +304,81 @@ export const RatesProvider = ({ children }) => {
     showNotification('Logged out of exporter portal.', 'info');
   };
 
+  // Booking Approval & Advance Bank Payment Prompt State
+  const [approvalPromptShipment, setApprovalPromptShipment] = useState(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+
+  const triggerApprovalNotice = (shipment) => {
+    setApprovalPromptShipment(shipment);
+    setIsApprovalModalOpen(true);
+  };
+
+  const closeApprovalNotice = () => {
+    setIsApprovalModalOpen(false);
+    setApprovalPromptShipment(null);
+  };
+
+  const approveShipment = (shipmentId, paymentMethodChoice = 'Bank Wire') => {
+    let targetShipment = null;
+    setShipments(prev =>
+      prev.map(shp => {
+        if (shp.id === shipmentId) {
+          const updated = {
+            ...shp,
+            status: 'Approved • Advance Payment Pending',
+            statusColor: 'emerald',
+            paymentStatus: paymentMethodChoice === 'Paid via Bank' ? 'Bank Transfer Initiated' : 'Pending Advance Payment',
+            paymentMethod: 'Bank Wire',
+            approvedAt: formatProduceDate(new Date())
+          };
+          targetShipment = updated;
+          return updated;
+        }
+        return shp;
+      })
+    );
+
+    if (targetShipment) {
+      triggerApprovalNotice(targetShipment);
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      } catch (e) {}
+      showNotification(`Order for AWB ${targetShipment.awbNumber} approved! Please complete advance payment.`);
+    }
+  };
+
+  const recordBankPayment = (shipmentId, referenceNumber) => {
+    setShipments(prev =>
+      prev.map(shp => {
+        if (shp.id === shipmentId) {
+          return {
+            ...shp,
+            status: 'Advance Payment Initiated / Verifying',
+            statusColor: 'emerald',
+            paymentStatus: 'Bank Transfer Initiated',
+            bankReference: referenceNumber || `BANK-TX-${Date.now().toString().slice(-6)}`,
+            paidAt: formatProduceDate(new Date())
+          };
+        }
+        return shp;
+      })
+    );
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+    } catch (e) {}
+    showNotification(`Bank transfer initiated! Our JKIA cargo accounts desk is verifying your payment.`, 'success');
+  };
+
   // Shipment & Document Functions
-  const createShipment = (shipmentData) => {
+  const createShipment = (shipmentData, triggerNotice = true) => {
     const awbRand = Math.floor(10000 + Math.random() * 90000);
     const airlineCode = shipmentData.airlineCode || 'KQ';
     const awb = `${airlineCode}-0704-${awbRand}`;
@@ -333,8 +406,11 @@ export const RatesProvider = ({ children }) => {
       grandTotalUSD: Number(shipmentData.grandTotalUSD || (quotedRate * weight).toFixed(2)),
       flightNumber: shipmentData.flightNumber || `${airlineCode} ${Math.floor(100 + Math.random() * 900)}`,
       flightDate: shipmentData.flightDate || 'Tomorrow',
-      status: 'Booking Confirmed / Documents Pending',
-      statusColor: 'sky',
+      status: 'Approved • Advance Payment Pending',
+      statusColor: 'emerald',
+      paymentStatus: 'Pending Advance Payment',
+      paymentMethod: 'Bank Wire',
+      approvedAt: formatProduceDate(new Date()),
       createdAt: 'Just Now',
       documents: [
         {
@@ -363,8 +439,12 @@ export const RatesProvider = ({ children }) => {
     };
 
     setShipments(prev => [newShipment, ...prev]);
-    showNotification(`Shipment ${awb} created with $${profit} profit margin!`);
-    setActiveTab('portal');
+    showNotification(`Shipment ${awb} booked! Please note advance payment requirements.`);
+    
+    if (triggerNotice) {
+      triggerApprovalNotice(newShipment);
+    }
+
     return newShipment;
   };
 
@@ -557,6 +637,12 @@ export const RatesProvider = ({ children }) => {
         uploadDocument,
         deleteDocument,
         updateShipmentStatus,
+        approvalPromptShipment,
+        isApprovalModalOpen,
+        triggerApprovalNotice,
+        closeApprovalNotice,
+        approveShipment,
+        recordBankPayment,
         totalTonnageKg,
         totalProfitEarnedUSD,
         isAdminOpen,

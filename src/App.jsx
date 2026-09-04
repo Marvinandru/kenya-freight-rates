@@ -10,6 +10,7 @@ import { MarketInsights } from './components/MarketInsights';
 import { AdminManager } from './components/AdminManager';
 import { AuthModal } from './components/AuthModal';
 import { RateHistoryModal } from './components/RateHistoryModal';
+import { OrderApprovalModal } from './components/OrderApprovalModal';
 import { Footer } from './components/Footer';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
@@ -57,6 +58,9 @@ const AppContent = () => {
 
       {/* Rate History Sparkline Modal */}
       <RateHistoryModal />
+
+      {/* Order Booking Approval & Advance Bank Payment Prompt Modal */}
+      <OrderApprovalModal />
 
       {/* Footer */}
       <Footer />

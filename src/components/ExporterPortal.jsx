@@ -23,7 +23,8 @@ import {
   User,
   LogOut,
   Sparkles,
-  Leaf
+  Leaf,
+  CreditCard
 } from 'lucide-react';
 
 export const ExporterPortal = () => {
@@ -34,7 +35,8 @@ export const ExporterPortal = () => {
     shipments, 
     uploadDocument, 
     deleteDocument, 
-    createShipment, 
+    createShipment,
+    triggerApprovalNotice,
     rates, 
     profitMarginPerKg,
     currencyMode,
@@ -118,7 +120,7 @@ export const ExporterPortal = () => {
     e.preventDefault();
     const rateItem = rates.find(r => r.origin === newOrigin && r.destination === newDest && r.commodity === newCommodity) || rates[0];
     
-    createShipment({
+    const newShp = createShipment({
       origin: newOrigin,
       destination: newDest,
       commodity: newCommodity,
@@ -129,10 +131,13 @@ export const ExporterPortal = () => {
       grossWeight: Number(newWeight),
       chargeableWeight: Number(newWeight),
       baseRatePerKg: rateItem.rate1000kg || 1.70,
-      flightDate: '2026-09-05'
-    });
+      flightDate: '3 Days Ahead (Space Confirmed)'
+    }, true);
 
     setIsBookingModalOpen(false);
+    if (newShp?.id) {
+      setActiveShipmentId(newShp.id);
+    }
   };
 
   const handleShareBundle = (shp) => {
@@ -314,7 +319,16 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => triggerApprovalNotice(activeShipment)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all shadow-sm"
+                    title="View advance bank wire instructions and 3-day booking policy"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Advance Bank Info & Policy</span>
+                  </button>
+
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
                     className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition-all active:scale-95"
@@ -562,6 +576,14 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
             </div>
 
             <form onSubmit={handleBookingSubmit} className="p-6 space-y-4 text-xs">
+              {/* 3 Days Advance Quote Notice Banner */}
+              <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-500/30 flex items-start gap-2.5 text-[11px] text-sky-200">
+                <Calendar className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-white block">3-Day Advance Quoting Policy:</span>
+                  Please request quotes and confirm bookings at least 3 days in advance to be assured of flight space. All payments must be completed in advance via bank transfer prior to cold-store intake.
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1">Departure</label>
