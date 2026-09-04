@@ -29,6 +29,10 @@ export const RateCalculator = () => {
     commodities, 
     currencyMode, 
     exchangeRate,
+    profitMarginPerKg,
+    getSellingRate,
+    getSellingRatePerMT,
+    markupPerMT,
     selectedRouteForCalc,
     setSelectedRouteForCalc,
     createShipment,
@@ -124,7 +128,7 @@ export const RateCalculator = () => {
       const airline = airlines.find(a => a.id === item.airlineId) || { name: item.airlineId, code: item.airlineId };
       
       let baseRatePerKg = item.rate1000kg;
-      let tierApplied = '+1000kg';
+      let tierApplied = '+1000kg (Bulk MT)';
 
       if (chargeableWeight < 100) {
         baseRatePerKg = item.rate45kg || item.rate100kg;
@@ -140,15 +144,20 @@ export const RateCalculator = () => {
         tierApplied = '+500kg';
       } else {
         baseRatePerKg = item.rate1000kg;
-        tierApplied = '+1000kg';
+        tierApplied = '+1000kg (1 MT)';
       }
 
-      const totalBaseFreight = Math.max(item.minCharge || 0, baseRatePerKg * chargeableWeight);
+      // Ensure quoted rates include the 0.20 USD/KG markup (= $200.00 USD / Metric Ton)
+      const quotedRatePerKg = Number((baseRatePerKg + profitMarginPerKg).toFixed(2));
+      const quotedRatePerMT = Number((quotedRatePerKg * 1000).toFixed(2));
+      const markupPerMTApplied = Number((profitMarginPerKg * 1000).toFixed(2)); // $200.00 USD / MT
+      const totalBaseFreight = Math.max(item.minCharge || 0, quotedRatePerKg * chargeableWeight);
       const totalFuel = (item.fuelSurcharge || 0) * chargeableWeight;
       const totalSecurity = (item.secSurcharge || 0) * chargeableWeight;
       const totalHandling = (item.handlingFee || 0) * chargeableWeight;
       const grandTotalUSD = totalBaseFreight + totalFuel + totalSecurity + totalHandling;
       const effectiveAllInPerKg = grandTotalUSD / (chargeableWeight || 1);
+      const effectiveAllInPerMT = effectiveAllInPerKg * 1000;
 
       return {
         ...item,
@@ -157,15 +166,19 @@ export const RateCalculator = () => {
         airlineLogoBg: airline.logoBg,
         tierApplied,
         baseRatePerKg,
+        quotedRatePerKg,
+        quotedRatePerMT,
+        markupPerMTApplied,
         totalBaseFreight,
         totalFuel,
         totalSecurity,
         totalHandling,
         grandTotalUSD,
-        effectiveAllInPerKg
+        effectiveAllInPerKg,
+        effectiveAllInPerMT
       };
     }).sort((a, b) => a.grandTotalUSD - b.grandTotalUSD);
-  }, [rates, origin, destination, commodity, chargeableWeight, airlines]);
+  }, [rates, origin, destination, commodity, chargeableWeight, airlines, profitMarginPerKg]);
 
   const formatPrice = (usdVal) => {
     if (!usdVal && usdVal !== 0) return '-';
@@ -178,18 +191,20 @@ export const RateCalculator = () => {
   const handleCopyQuote = (carrier) => {
     const dest = airports[destination]?.name || destination;
     const commObj = commodities.find(c => c.id === commodity);
+    const weightInMT = (chargeableWeight / 1000).toFixed(2);
     const text = `🥑 *KENYA FRESH PRODUCE AIR FREIGHT QUOTE* ✈️
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📍 *Route:* ${origin} (JKIA Nairobi) ➔ ${destination} (${dest})
 🌱 *Produce Item:* ${commObj?.name} (${commObj?.tempRange})
-⚖️ *Actual Gross Weight:* ${grossWeight} KG
+⚖️ *Actual Gross Weight:* ${grossWeight} KG (${(grossWeight / 1000).toFixed(2)} MT)
 📐 *Dimensions/Volume:* ${volumeCbm} CBM (${volumetricWeight} Vol. KG)
-🎯 *Chargeable Weight:* ${chargeableWeight} KG
+🎯 *Chargeable Weight:* ${chargeableWeight} KG (${weightInMT} MT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✈️ *Airline Carrier:* ${carrier.airlineName} (${carrier.airlineCode})
-💰 *Base Produce Rate (${carrier.tierApplied}):* $${carrier.baseRatePerKg.toFixed(2)} / KG
+💰 *Quoted Price / MT:* $${carrier.quotedRatePerMT.toLocaleString()} / MT ($${carrier.quotedRatePerKg.toFixed(2)} / KG)
+✨ *Markup Included:* +$0.20 / KG (+$200.00 USD / Metric Ton)
 ⛽ *FSC Fuel + SSC Security:* $${((carrier.fuelSurcharge || 0) + (carrier.secSurcharge || 0)).toFixed(2)} / KG
-💵 *Total Landed Air Freight:* $${carrier.grandTotalUSD.toFixed(2)} USD (All-In: $${carrier.effectiveAllInPerKg.toFixed(2)} / KG)
+💵 *Total Landed Air Freight:* $${carrier.grandTotalUSD.toFixed(2)} USD (All-In: $${carrier.effectiveAllInPerMT.toFixed(2)} / MT • $${carrier.effectiveAllInPerKg.toFixed(2)} / KG)
 ⏱️ *Transit Duration:* ${carrier.transitTime} | ${carrier.frequency}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🌿 *Pre-Cooling & KEPHIS Phytosanitary Clearance Ready*
@@ -504,38 +519,53 @@ export const RateCalculator = () => {
                           {carrier.airlineCode}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-extrabold text-base text-white">{carrier.airlineName}</h4>
                             <span className="text-[10px] font-mono font-bold bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
                               {carrier.tierApplied}
                             </span>
+                            <span className="text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                              +$200/MT ($0.20/kg) Markup Incl.
+                            </span>
                           </div>
-                          <div className="text-xs text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
-                            <span className="flex items-center gap-1">
+                          <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2 font-mono">
+                            <span className="text-emerald-300 font-bold">
+                              {formatPrice(carrier.quotedRatePerMT)} / MT
+                            </span>
+                            <span className="text-slate-500">•</span>
+                            <span className="text-slate-300">
+                              {formatPrice(carrier.quotedRatePerKg)} / KG
+                            </span>
+                            <span className="text-slate-500">•</span>
+                            <span className="flex items-center gap-1 text-slate-400">
                               <Clock className="w-3 h-3 text-emerald-400" /> {carrier.transitTime}
                             </span>
-                            <span>•</span>
-                            <span>{carrier.frequency}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Total Cost */}
                       <div className="text-left sm:text-right">
-                        <div className="text-xs text-slate-400">Total Landed Freight</div>
+                        <div className="text-xs text-slate-400">Total Landed Freight ({(chargeableWeight / 1000).toFixed(2)} MT)</div>
                         <div className="text-2xl font-mono font-extrabold text-emerald-400">
                           {formatPrice(carrier.grandTotalUSD)}
                         </div>
-                        <div className="text-[11px] font-mono text-slate-400">
-                          All-In: <span className="text-teal-300 font-semibold">{formatPrice(carrier.effectiveAllInPerKg)} / KG</span>
+                        <div className="text-[11px] font-mono text-slate-300">
+                          All-In: <span className="text-teal-300 font-bold">{formatPrice(carrier.effectiveAllInPerMT)} / MT</span>
+                          <span className="text-slate-500 mx-1">•</span>
+                          <span>{formatPrice(carrier.effectiveAllInPerKg)} / KG</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Breakdown */}
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono bg-slate-950/60 p-2.5 rounded-xl">
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] font-mono bg-slate-950/60 p-2.5 rounded-xl">
                       <div>
-                        <span className="text-slate-500 block text-[10px]">Base Freight:</span>
+                        <span className="text-slate-500 block text-[10px]">Quoted Rate / MT:</span>
+                        <span className="text-emerald-300 font-bold">{formatPrice(carrier.quotedRatePerMT)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Base Freight Total:</span>
                         <span className="text-slate-200">{formatPrice(carrier.totalBaseFreight)}</span>
                       </div>
                       <div>
@@ -556,7 +586,7 @@ export const RateCalculator = () => {
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
                       <div className="text-[11px] text-slate-400 flex items-center gap-1">
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Valid for Today’s Produce Booking</span>
+                        <span>Valid for Today’s Produce Booking • Includes +$200/MT Markup</span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -580,11 +610,12 @@ export const RateCalculator = () => {
                               commodity,
                               commodityName: commodityConfig.name,
                               airlineId: carrier.id,
-                              airlineName: carrier.name,
-                              airlineCode: carrier.code,
+                              airlineName: carrier.airlineName,
+                              airlineCode: carrier.airlineCode,
                               grossWeight,
                               chargeableWeight,
-                              baseRatePerKg: carrier.applicableRate,
+                              baseRatePerKg: carrier.baseRatePerKg,
+                              quotedRatePerKg: carrier.quotedRatePerKg,
                               grandTotalUSD: carrier.grandTotalUSD,
                               flightDate: '3 Days Ahead (Space Confirmed)'
                             }, true);

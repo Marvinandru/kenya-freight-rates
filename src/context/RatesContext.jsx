@@ -5,7 +5,7 @@ import confetti from 'canvas-confetti';
 
 const RatesContext = createContext();
 
-const STORAGE_KEY = 'aero_produce_rates_v3';
+const STORAGE_KEY = 'aero_produce_rates_v4';
 const SHIPMENTS_KEY = 'aero_produce_shipments_v1';
 const CLIENTS_KEY = 'aero_produce_clients_v1';
 const AUTH_KEY = 'aero_produce_auth_user_v1';
@@ -57,7 +57,7 @@ export const isDateToday = (timestampOrDate) => {
 };
 
 export const RatesProvider = ({ children }) => {
-  // Profit Margin per KG (Default $0.20 USD for business owner)
+  // Profit Margin per KG (Default $0.20 USD for business owner = $200.00 USD / Metric Ton)
   const [profitMarginPerKg, setProfitMarginPerKg] = useState(() => {
     try {
       const saved = localStorage.getItem(PROFIT_KEY);
@@ -67,11 +67,24 @@ export const RatesProvider = ({ children }) => {
     }
   });
 
-  // Base Airline Rates
+  // Base Airline Rates - Always hydrate with INITIAL_RATES to include all routes (Kuwait, Kazakhstan, Italy, etc.)
   const [rates, setRates] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_RATES;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const parsedMap = new Map(parsed.map(r => [r.id, r]));
+        // Merge so any new initial rates are guaranteed to be included
+        const merged = INITIAL_RATES.map(initItem => {
+          return parsedMap.has(initItem.id) ? parsedMap.get(initItem.id) : initItem;
+        });
+        const initIds = new Set(INITIAL_RATES.map(r => r.id));
+        parsed.forEach(p => {
+          if (!initIds.has(p.id)) merged.push(p);
+        });
+        return merged;
+      }
+      return INITIAL_RATES;
     } catch (e) {
       return INITIAL_RATES;
     }
@@ -111,26 +124,8 @@ export const RatesProvider = ({ children }) => {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // When refreshing the web page, the time and rates always refresh dynamically to right now!
   const [lastUpdated, setLastUpdated] = useState(() => {
-    // 1. Clean legacy stale keys from previous releases
-    try {
-      localStorage.removeItem('aero_produce_last_updated_v3');
-      localStorage.removeItem('aero_produce_last_updated_v2');
-      localStorage.removeItem('aero_produce_last_updated_v1');
-      localStorage.removeItem('aero_produce_last_updated_ts_v1');
-    } catch (e) {}
-
-    // 2. Check if a date was stored for TODAY in Nairobi
-    try {
-      const savedTodayKey = localStorage.getItem(TODAY_KEY);
-      const currentTodayKey = getTodayKeyNairobi();
-      const savedDate = localStorage.getItem(LAST_UPDATED_KEY);
-      if (savedTodayKey === currentTodayKey && savedDate) {
-        return savedDate;
-      }
-    } catch (e) {}
-
-    // 3. Otherwise, always freshly generate today's live date in Nairobi time
     const fresh = formatProduceDate(new Date());
     try {
       localStorage.setItem(TODAY_KEY, getTodayKeyNairobi());
@@ -147,7 +142,7 @@ export const RatesProvider = ({ children }) => {
   const [selectedShipmentForModal, setSelectedShipmentForModal] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  // Manual & automatic refresh to today's date
+  // Manual & automatic refresh to today's date & live rates
   const refreshToToday = (showToast = true) => {
     setIsRefreshing(true);
     const now = new Date();
@@ -158,50 +153,55 @@ export const RatesProvider = ({ children }) => {
     try {
       localStorage.setItem(TODAY_KEY, currentTodayKey);
       localStorage.setItem(LAST_UPDATED_KEY, formatted);
-      // Clean up any legacy keys
-      localStorage.removeItem('aero_produce_last_updated_v3');
-      localStorage.removeItem('aero_produce_last_updated_ts_v1');
     } catch (e) {}
+
+    // Refresh rates validity and sync latest routes from INITIAL_RATES
+    setRates(prevRates => {
+      const prevMap = new Map(prevRates.map(r => [r.id, r]));
+      return INITIAL_RATES.map(initItem => {
+        const existing = prevMap.get(initItem.id);
+        return existing ? { ...existing, validityDate: 'Today + 7 Days' } : initItem;
+      });
+    });
 
     setTimeout(() => {
       setIsRefreshing(false);
     }, 600);
 
     if (showToast) {
-      showNotification(`Rates & validity date refreshed to today: ${formatted}`, 'success');
+      showNotification(`Rates & validity timestamp refreshed to live time: ${formatted}`, 'success');
     }
     return formatted;
   };
 
-  // Day rollover detection & auto-refresh (re-checks when tab focuses or date crosses midnight)
+  // Day rollover detection & mount refresh (guarantees refreshed rates & live time on every web page reload)
   useEffect(() => {
-    const checkAndSyncToday = () => {
+    const syncLiveProduceRates = () => {
+      const now = new Date();
+      const formatted = formatProduceDate(now);
+      const currentTodayKey = getTodayKeyNairobi(now);
+      setLastUpdated(formatted);
       try {
-        const savedTodayKey = localStorage.getItem(TODAY_KEY);
-        const currentTodayKey = getTodayKeyNairobi();
-        if (savedTodayKey !== currentTodayKey) {
-          refreshToToday(false);
-        }
-      } catch (e) {
-        refreshToToday(false);
-      }
+        localStorage.setItem(TODAY_KEY, currentTodayKey);
+        localStorage.setItem(LAST_UPDATED_KEY, formatted);
+      } catch (e) {}
     };
 
-    // Immediate check on mount
-    checkAndSyncToday();
+    // Immediate sync on page reload/refresh
+    syncLiveProduceRates();
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        checkAndSyncToday();
+        syncLiveProduceRates();
       }
     };
 
-    window.addEventListener('focus', checkAndSyncToday);
+    window.addEventListener('focus', syncLiveProduceRates);
     document.addEventListener('visibilitychange', handleVisibility);
-    const interval = setInterval(checkAndSyncToday, 30 * 1000);
+    const interval = setInterval(syncLiveProduceRates, 30 * 1000);
 
     return () => {
-      window.removeEventListener('focus', checkAndSyncToday);
+      window.removeEventListener('focus', syncLiveProduceRates);
       document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);
     };
@@ -243,11 +243,21 @@ export const RatesProvider = ({ children }) => {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Helper to calculate quoted rate with profit margin
+  // Helper to calculate quoted rate with profit margin per KG ($0.20/kg)
   const getSellingRate = (baseRate) => {
     if (baseRate === undefined || baseRate === null) return 0;
     return Number((Number(baseRate) + profitMarginPerKg).toFixed(2));
   };
+
+  // Helper to calculate quoted price per Metric Ton (1 MT = 1000 KG)
+  // Quoted price per MT = (baseRate + profitMarginPerKg) * 1000
+  // Explicitly includes the $0.20 USD/KG markup = +$200.00 USD / MT
+  const getSellingRatePerMT = (baseRate) => {
+    if (baseRate === undefined || baseRate === null) return 0;
+    return Number(((Number(baseRate) + profitMarginPerKg) * 1000).toFixed(2));
+  };
+
+  const markupPerMT = Number((profitMarginPerKg * 1000).toFixed(2)); // $200.00 USD / MT markup
 
   // Auth Functions
   const login = (email) => {
@@ -623,6 +633,8 @@ export const RatesProvider = ({ children }) => {
         profitMarginPerKg,
         setProfitMarginPerKg,
         getSellingRate,
+        getSellingRatePerMT,
+        markupPerMT,
         currentUser,
         setCurrentUser,
         clients,

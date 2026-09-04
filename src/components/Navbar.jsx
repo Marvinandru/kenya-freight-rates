@@ -61,7 +61,10 @@ export const Navbar = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+              +$0.20/kg (+$200/MT) Markup Active
+            </span>
             <div className="text-slate-400">
               <span>USD/KES: </span>
               <span className="font-mono text-emerald-400 font-medium">1 USD ≈ {exchangeRate} KES</span>
@@ -83,8 +86,8 @@ export const Navbar = () => {
                 <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white bg-clip-text">
                   Aero<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">Produce</span> Kenya
                 </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider">
-                  USD/KG
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider font-mono">
+                  USD/KG • USD/MT
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 font-normal">Daily Fresh Produce Air Freight & Export Documents</p>

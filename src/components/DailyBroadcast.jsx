@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const DailyBroadcast = () => {
-  const { rates, lastUpdated, refreshToToday, isRefreshing, airlines, airports, commodities, showNotification } = useRates();
+  const { rates, lastUpdated, refreshToToday, isRefreshing, airlines, airports, commodities, getSellingRate, profitMarginPerKg, showNotification } = useRates();
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
   const [broadcastCategory, setBroadcastCategory] = useState('avocados'); // 'avocados' | 'soya_beans' | 'chillies' | 'all'
 
@@ -37,6 +37,7 @@ export const DailyBroadcast = () => {
     text += `📅 *Date:* ${lastUpdated}\n`;
     text += `📍 *Origin:* Nairobi JKIA Cargo Hub (NBO)\n`;
     text += `🌱 *Category:* ${broadcastCategory.toUpperCase().replace('_', ' ')} AIR FREIGHT SPOT RATES\n`;
+    text += `✨ *Pricing Notice:* All quoted rates include +$0.20/kg (+$200.00 USD/MT) markup\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     // Group by destination
@@ -53,11 +54,14 @@ export const DailyBroadcast = () => {
       items.forEach(item => {
         const airline = airlines.find(a => a.id === item.airlineId)?.name || item.airlineId;
         const trend = item.changeDirection === 'down' ? '🟢 (Down)' : item.changeDirection === 'up' ? '🔴 (Up)' : '⚪';
-        const allIn = ((item.rate1000kg || 0) + (item.fuelSurcharge || 0) + (item.secSurcharge || 0) + (item.handlingFee || 0)).toFixed(2);
+        const sellingRate = getSellingRate(item.rate1000kg);
+        const sellingRateMT = (sellingRate * 1000).toFixed(2);
+        const allIn = (sellingRate + (item.fuelSurcharge || 0) + (item.secSurcharge || 0) + (item.handlingFee || 0)).toFixed(2);
+        const allInMT = (Number(allIn) * 1000).toFixed(2);
         
         text += `• *${airline}* (${item.airlineId})\n`;
-        text += `  └ Base (+1000kg): *$${item.rate1000kg.toFixed(2)}/kg* ${trend}\n`;
-        text += `  └ All-In Landed: *$${allIn}/kg* | ${item.transitTime}\n`;
+        text += `  └ Quoted (+1000kg): *$${Number(sellingRateMT).toLocaleString()}/MT* ($${sellingRate.toFixed(2)}/kg) ${trend}\n`;
+        text += `  └ All-In Landed: *$${Number(allInMT).toLocaleString()}/MT* ($${allIn}/kg) | ${item.transitTime}\n`;
       });
       text += `\n`;
     });
@@ -65,6 +69,8 @@ export const DailyBroadcast = () => {
     text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     text += `🌿 *Cold Chain:* Target +4°C (Avocados) | +8°C (Chillies)\n`;
     text += `📑 *KEPHIS & EU FCM:* Pre-clearance ready at JKIA\n`;
+    text += `💵 *Payment Terms:* 100% Advance Payment via USD Bank Wire\n`;
+    text += `⏱️ *Advance Booking:* Quotes assured 3 days in advance\n`;
     text += `📞 *Produce Export Bookings:* Contact JKIA Fresh Desk\n`;
     text += `🔗 *Live Rate Dashboard:* AeroProduce Kenya`;
 
@@ -206,7 +212,9 @@ export const DailyBroadcast = () => {
                 const airline = airlines.find(a => a.id === item.airlineId);
                 const dest = airports[item.destination];
                 const comm = commodities.find(c => c.id === item.commodity);
-                const allIn = ((item.rate1000kg || 0) + (item.fuelSurcharge || 0) + (item.secSurcharge || 0) + (item.handlingFee || 0)).toFixed(2);
+                const quotedRate = getSellingRate(item.rate1000kg);
+                const quotedRateMT = (quotedRate * 1000).toFixed(0);
+                const allIn = (quotedRate + (item.fuelSurcharge || 0) + (item.secSurcharge || 0) + (item.handlingFee || 0)).toFixed(2);
 
                 return (
                   <div key={item.id} className="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80 flex items-center justify-between text-xs">
@@ -221,8 +229,9 @@ export const DailyBroadcast = () => {
                     </div>
 
                     <div className="text-right font-mono">
-                      <div className="font-extrabold text-emerald-400">${item.rate1000kg.toFixed(2)}/kg</div>
-                      <div className="text-[10px] text-teal-300">All-In: ${allIn}</div>
+                      <div className="font-extrabold text-emerald-400">${Number(quotedRateMT).toLocaleString()} / MT</div>
+                      <div className="text-[10px] text-emerald-300/90">${quotedRate.toFixed(2)}/kg</div>
+                      <div className="text-[10px] text-teal-300">All-In: ${allIn}/kg</div>
                     </div>
                   </div>
                 );

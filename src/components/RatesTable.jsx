@@ -128,10 +128,10 @@ export const RatesTable = () => {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-emerald-400" />
-                Fresh Produce Air Freight Rates Matrix (USD/KG)
+                Fresh Produce Air Freight Rates Matrix
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-                +${profitMarginPerKg.toFixed(2)}/kg Margin Included
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono shadow-sm">
+                +$0.20/kg (+$200.00/MT) Markup Included in All Quoted Rates
               </span>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-slate-300">
                 <Clock className="w-3 h-3 text-emerald-400" />
@@ -147,7 +147,7 @@ export const RatesTable = () => {
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Verified daily export spot rates for Avocados, Soya Beans, Chillies, Herbs & Tropicals out of JKIA Nairobi.
+              Verified daily export spot rates for Avocados, Soya Beans, Chillies, Herbs & Tropicals out of JKIA Nairobi. All quoted rates include $0.20/kg ($200/MT) markup.
             </p>
           </div>
 
@@ -288,8 +288,9 @@ export const RatesTable = () => {
                 <th className="py-3.5 px-3 text-right hidden md:table-cell">+300kg</th>
                 <th className="py-3.5 px-3 text-right hidden lg:table-cell">+500kg</th>
                 <th className="py-3.5 px-4 text-right">
-                  <div className="flex items-center justify-end gap-1 text-emerald-400">
-                    <span>+1000kg (Quoted)</span>
+                  <div className="flex flex-col items-end text-emerald-400">
+                    <span className="font-extrabold text-xs">Quoted Price / MT</span>
+                    <span className="text-[9px] font-mono text-emerald-300/80 normal-case">(+1,000kg • incl. +$200/MT)</span>
                   </div>
                 </th>
                 <th className="py-3.5 px-3 text-right hidden sm:table-cell">All-In Rate</th>
@@ -382,10 +383,16 @@ export const RatesTable = () => {
                           {formatPrice(quotedRate500)}
                         </td>
 
-                        {/* Rate +1000kg (Highlighted Quoted Rate) */}
-                        <td className="py-3 px-4 text-right font-mono font-extrabold text-sm sm:text-base text-emerald-400 bg-emerald-950/20">
-                          {formatPrice(quotedRate1000)}
-                          <span className="text-[10px] font-sans font-normal text-slate-400 ml-1">/kg</span>
+                        {/* Rate +1000kg (Highlighted Quoted Rate per MT and per KG) */}
+                        <td className="py-3 px-4 text-right font-mono font-extrabold bg-emerald-950/25 border-l border-r border-emerald-900/30">
+                          <div className="text-sm sm:text-base text-emerald-400 leading-tight">
+                            {formatPrice(quotedRate1000 * 1000)}
+                            <span className="text-[10px] font-sans font-normal text-slate-300 ml-1">/ MT</span>
+                          </div>
+                          <div className="text-[11px] text-emerald-300 font-medium mt-0.5">
+                            {formatPrice(quotedRate1000)}/kg
+                            <span className="text-[10px] text-emerald-400/80 font-sans ml-1">(+$200/MT incl.)</span>
+                          </div>
                         </td>
 
                         {/* All-In Estimate */}
@@ -451,32 +458,36 @@ export const RatesTable = () => {
                               <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
                                 <div className="font-bold text-slate-200 mb-2 flex items-center justify-between">
                                   <span>Produce Rate Breakdown</span>
-                                  <span className="text-[10px] text-emerald-400 font-normal">+$0.20 Margin Active</span>
+                                  <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">+$0.20/kg (+$200/MT) Active</span>
                                 </div>
                                 <div className="space-y-1.5 font-mono">
                                   <div className="flex justify-between text-slate-400">
                                     <span>Airline Base (+1000kg):</span>
-                                    <span className="text-white font-semibold">{formatPrice(item.rate1000kg)}</span>
+                                    <span className="text-white font-semibold">{formatPrice(item.rate1000kg)}/kg • {formatPrice(item.rate1000kg * 1000)}/MT</span>
                                   </div>
                                   <div className="flex justify-between text-emerald-400">
-                                    <span>Service & Freight Margin:</span>
-                                    <span className="font-bold">+${profitMarginPerKg.toFixed(2)}</span>
+                                    <span>Markup (+1 MT):</span>
+                                    <span className="font-bold">+${profitMarginPerKg.toFixed(2)}/kg • +${(profitMarginPerKg * 1000).toFixed(0)}.00/MT</span>
+                                  </div>
+                                  <div className="flex justify-between text-slate-300 font-semibold">
+                                    <span>Quoted Price (+1000kg):</span>
+                                    <span className="text-emerald-300">{formatPrice(quotedRate1000 * 1000)}/MT ({formatPrice(quotedRate1000)}/kg)</span>
                                   </div>
                                   <div className="flex justify-between text-slate-400">
                                     <span>Fuel Surcharge (FSC):</span>
-                                    <span className="text-sky-300">{formatPrice(item.fuelSurcharge)}</span>
+                                    <span className="text-sky-300">{formatPrice(item.fuelSurcharge)}/kg • {formatPrice(item.fuelSurcharge * 1000)}/MT</span>
                                   </div>
                                   <div className="flex justify-between text-slate-400">
                                     <span>Security Surcharge (SSC):</span>
-                                    <span className="text-sky-300">{formatPrice(item.secSurcharge)}</span>
+                                    <span className="text-sky-300">{formatPrice(item.secSurcharge)}/kg • {formatPrice(item.secSurcharge * 1000)}/MT</span>
                                   </div>
                                   <div className="flex justify-between text-slate-400">
-                                    <span>KAA / Terminal Handling:</span>
-                                    <span className="text-sky-300">{formatPrice(item.handlingFee)}</span>
+                                    <span>KAA / Handling:</span>
+                                    <span className="text-sky-300">{formatPrice(item.handlingFee)}/kg • {formatPrice(item.handlingFee * 1000)}/MT</span>
                                   </div>
                                   <div className="pt-2 border-t border-slate-800 flex justify-between font-bold text-emerald-400">
                                     <span>Total Landed Selling Rate:</span>
-                                    <span>{formatPrice(allInPerKg)} / kg</span>
+                                    <span>{formatPrice(allInPerKg * 1000)} / MT ({formatPrice(allInPerKg)} / kg)</span>
                                   </div>
                                 </div>
                               </div>

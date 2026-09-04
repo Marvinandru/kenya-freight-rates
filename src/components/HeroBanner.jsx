@@ -26,29 +26,31 @@ export const HeroBanner = () => {
     setActiveTab, 
     setIsAdminOpen, 
     currencyMode, 
-    exchangeRate 
+    exchangeRate,
+    getSellingRate,
+    profitMarginPerKg
   } = useRates();
 
-  // Find lowest avocado rate
+  // Find lowest avocado quoted rate
   const avocadoRates = rates
     .filter(r => r.commodity === 'avocados')
-    .map(r => r.rate1000kg)
+    .map(r => getSellingRate(r.rate1000kg))
     .filter(Boolean);
-  const minAvocadoRate = avocadoRates.length > 0 ? Math.min(...avocadoRates) : 1.65;
+  const minAvocadoRate = avocadoRates.length > 0 ? Math.min(...avocadoRates) : 1.85;
 
-  // Find lowest soya beans / legumes rate
+  // Find lowest soya beans / legumes quoted rate
   const soyaRates = rates
     .filter(r => r.commodity === 'soya_beans')
-    .map(r => r.rate1000kg)
+    .map(r => getSellingRate(r.rate1000kg))
     .filter(Boolean);
-  const minSoyaRate = soyaRates.length > 0 ? Math.min(...soyaRates) : 1.68;
+  const minSoyaRate = soyaRates.length > 0 ? Math.min(...soyaRates) : 1.88;
 
-  // Find lowest chillies rate
+  // Find lowest chillies quoted rate
   const chilliRates = rates
     .filter(r => r.commodity === 'chillies')
-    .map(r => r.rate1000kg)
+    .map(r => getSellingRate(r.rate1000kg))
     .filter(Boolean);
-  const minChilliRate = chilliRates.length > 0 ? Math.min(...chilliRates) : 1.12;
+  const minChilliRate = chilliRates.length > 0 ? Math.min(...chilliRates) : 1.32;
 
   const formatPrice = (usdVal) => {
     if (currencyMode === 'KES') {
@@ -91,12 +93,12 @@ export const HeroBanner = () => {
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
               Fresh Produce Air Freight Rates <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400">
-                Avocados, Soya Beans & Chillies (USD/KG)
+                Avocados, Soya Beans & Chillies (USD/KG & USD/MT)
               </span>
             </h1>
 
             <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-              Compare verified daily air cargo spot rates from <strong className="text-white font-medium">Nairobi (JKIA - NBO)</strong> across international airlines exclusively for fresh produce exporters, packhouses, outgrowers, and horticulture forwarders.
+              Compare verified daily air cargo spot rates from <strong className="text-white font-medium">Nairobi (JKIA - NBO)</strong> across international airlines to Kuwait, Kazakhstan, Italy, Europe, Middle East & Asia. All quoted rates include the $0.20/kg ($200.00/MT) markup.
             </p>
 
             {/* Quick Action Badges */}
@@ -135,14 +137,14 @@ export const HeroBanner = () => {
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                 <span>🥑 Fresh Avocados</span>
                 <span className="flex items-center text-emerald-400 text-[10px] font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                  <TrendingDown className="w-3 h-3 mr-0.5" /> Best
+                  <TrendingDown className="w-3 h-3 mr-0.5" /> Quoted
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-mono font-extrabold text-white">
-                {formatPrice(minAvocadoRate)}
-                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ KG</span>
+              <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
+                {formatPrice(minAvocadoRate * 1000)}
+                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-emerald-400/90 mt-1 font-medium">NBO ➔ AMS / DXB (+1000kg)</p>
+              <p className="text-[11px] text-emerald-400/90 mt-1 font-mono font-medium">{formatPrice(minAvocadoRate)}/kg (+$200/MT incl.)</p>
             </div>
 
             {/* KPI 2: Soya Beans & Legumes */}
@@ -153,11 +155,11 @@ export const HeroBanner = () => {
                   Daily
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-mono font-extrabold text-white">
-                {formatPrice(minSoyaRate)}
-                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ KG</span>
+              <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
+                {formatPrice(minSoyaRate * 1000)}
+                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-teal-400/90 mt-1 font-medium">NBO ➔ LHR / BRU / AMS</p>
+              <p className="text-[11px] text-teal-400/90 mt-1 font-mono font-medium">{formatPrice(minSoyaRate)}/kg (+$200/MT incl.)</p>
             </div>
 
             {/* KPI 3: Fresh Chillies */}
@@ -168,11 +170,11 @@ export const HeroBanner = () => {
                   Spot
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-mono font-extrabold text-white">
-                {formatPrice(minChilliRate)}
-                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ KG</span>
+              <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
+                {formatPrice(minChilliRate * 1000)}
+                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-rose-400/90 mt-1 font-medium">NBO ➔ DXB / RUH / LHR</p>
+              <p className="text-[11px] text-rose-400/90 mt-1 font-mono font-medium">{formatPrice(minChilliRate)}/kg (+$200/MT incl.)</p>
             </div>
 
             {/* KPI 4: Produce Lanes */}
@@ -184,7 +186,7 @@ export const HeroBanner = () => {
                   Live
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">Europe, Middle East, Asia, USA</p>
+              <p className="text-[11px] text-slate-400 mt-1">Kuwait, Kazakhstan, Italy, EU, Gulf</p>
             </div>
           </div>
         </div>

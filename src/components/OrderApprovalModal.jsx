@@ -100,18 +100,22 @@ export const OrderApprovalModal = () => {
             <div>
               <span className="text-slate-500 block text-[10px]">Chargeable Weight</span>
               <span className="text-white font-bold text-sm">{shp.chargeableWeight?.toLocaleString()} KG</span>
+              <span className="text-[10px] text-slate-400 block font-normal">({(shp.chargeableWeight / 1000).toFixed(2)} Metric Tons)</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[10px]">All-In Rate</span>
-              <span className="text-emerald-400 font-bold text-sm">{formatUSD(shp.quotedRatePerKg)}/KG</span>
+              <span className="text-slate-500 block text-[10px]">Quoted Rate / MT</span>
+              <span className="text-emerald-400 font-bold text-sm">{formatUSD(shp.quotedRatePerKg * 1000)}/MT</span>
+              <span className="text-[10px] text-emerald-300/80 block font-normal">{formatUSD(shp.quotedRatePerKg)}/KG (incl. +$200/MT)</span>
             </div>
             <div>
               <span className="text-slate-500 block text-[10px]">Flight Departure</span>
               <span className="text-teal-300 font-bold text-sm">{shp.flightDate}</span>
+              <span className="text-[10px] text-sky-400 block font-normal">Space Pre-Reserved</span>
             </div>
             <div>
               <span className="text-slate-500 block text-[10px]">Total Due (USD)</span>
               <span className="text-emerald-300 font-bold text-sm">{formatUSD(shp.grandTotalUSD)}</span>
+              <span className="text-[10px] text-slate-400 block font-normal">Advance Wire Required</span>
             </div>
           </div>
 
