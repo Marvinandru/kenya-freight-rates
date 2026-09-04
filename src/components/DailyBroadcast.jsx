@@ -37,7 +37,6 @@ export const DailyBroadcast = () => {
     text += `📅 *Date:* ${lastUpdated}\n`;
     text += `📍 *Origin:* Nairobi JKIA Cargo Hub (NBO)\n`;
     text += `🌱 *Category:* ${broadcastCategory.toUpperCase().replace('_', ' ')} AIR FREIGHT SPOT RATES\n`;
-    text += `✨ *Pricing Notice:* All quoted rates include +$0.20/kg (+$200.00 USD/MT) markup\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     // Group by destination

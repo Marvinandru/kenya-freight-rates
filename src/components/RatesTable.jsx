@@ -24,7 +24,7 @@ import {
   RefreshCw,
   Calendar
 } from 'lucide-react';
-import { DESTINATION_REGIONS } from '../data/initialRates';
+import { DESTINATION_REGIONS, getAvailableFlightSpaceMT } from '../data/initialRates';
 
 export const RatesTable = () => {
   const { 
@@ -121,7 +121,7 @@ export const RatesTable = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Controls & Filter Matrix Header */}
+      {/* Top Banner & Search */}
       <div className="glass-panel p-5 rounded-2xl mb-6 shadow-xl border border-slate-800">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
           <div>
@@ -130,8 +130,9 @@ export const RatesTable = () => {
                 <Leaf className="w-5 h-5 text-emerald-400" />
                 Fresh Produce Air Freight Rates Matrix
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono shadow-sm">
-                +$0.20/kg (+$200.00/MT) Markup Included in All Quoted Rates
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono shadow-sm flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                Verified Airline Cargo Hold Space
               </span>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-slate-300">
                 <Clock className="w-3 h-3 text-emerald-400" />
@@ -147,7 +148,7 @@ export const RatesTable = () => {
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Verified daily export spot rates for Avocados, Soya Beans, Chillies, Herbs & Tropicals out of JKIA Nairobi. All quoted rates include $0.20/kg ($200/MT) markup.
+              Verified daily export spot rates and live aircraft hold capacity for Avocados, Soya Beans, Chillies, Herbs & Tropicals out of JKIA Nairobi.
             </p>
           </div>
 
@@ -290,7 +291,13 @@ export const RatesTable = () => {
                 <th className="py-3.5 px-4 text-right">
                   <div className="flex flex-col items-end text-emerald-400">
                     <span className="font-extrabold text-xs">Quoted Price / MT</span>
-                    <span className="text-[9px] font-mono text-emerald-300/80 normal-case">(+1,000kg • incl. +$200/MT)</span>
+                    <span className="text-[9px] font-mono text-emerald-300/80 normal-case">(+1,000kg • Bulk Rate)</span>
+                  </div>
+                </th>
+                <th className="py-3.5 px-3 text-center">
+                  <div className="flex flex-col items-center text-sky-400">
+                    <span className="font-bold text-xs">Flight Space Left</span>
+                    <span className="text-[9px] font-mono text-sky-300/80 normal-case">(Avail. Cargo)</span>
                   </div>
                 </th>
                 <th className="py-3.5 px-3 text-right hidden sm:table-cell">All-In Rate</th>
@@ -301,14 +308,14 @@ export const RatesTable = () => {
             <tbody className="divide-y divide-slate-800/60 text-xs">
               {filteredRates.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-12 text-center text-slate-400">
+                  <td colSpan="11" className="py-12 text-center text-slate-400">
                     <AlertCircle className="w-8 h-8 text-slate-500 mx-auto mb-2" />
                     <p className="text-sm font-medium">No fresh produce rates match your selected filters.</p>
                   </td>
                 </tr>
               ) : (
                 filteredRates.map((item) => {
-                  const airline = airlines.find(a => a.id === item.airlineId) || { name: item.airlineId, code: item.airlineId, logoBg: 'bg-slate-800' };
+                  const airline = airlines.find(a => a.id === item.airlineId) || { name: item.airlineId, code: item.airlineId, logoBg: 'bg-slate-800', fleet: 'Widebody Cargo Hold' };
                   const destAirport = airports[item.destination] || { code: item.destination, city: item.destination, country: '' };
                   const origAirport = airports[item.origin] || { code: item.origin, city: item.origin };
                   const comm = commodities.find(c => c.id === item.commodity) || { name: item.commodity, icon: '🥑' };
@@ -319,6 +326,7 @@ export const RatesTable = () => {
                   const quotedRate100 = getSellingRate(item.rate100kg);
 
                   const allInPerKg = quotedRate1000 + (item.fuelSurcharge || 0) + (item.secSurcharge || 0) + (item.handlingFee || 0);
+                  const spaceMT = getAvailableFlightSpaceMT(item);
                   const isExpanded = expandedRowId === item.id;
 
                   return (
@@ -383,7 +391,7 @@ export const RatesTable = () => {
                           {formatPrice(quotedRate500)}
                         </td>
 
-                        {/* Rate +1000kg (Highlighted Quoted Rate per MT and per KG) */}
+                        {/* Rate +1000kg (Quoted Rate per MT and per KG) */}
                         <td className="py-3 px-4 text-right font-mono font-extrabold bg-emerald-950/25 border-l border-r border-emerald-900/30">
                           <div className="text-sm sm:text-base text-emerald-400 leading-tight">
                             {formatPrice(quotedRate1000 * 1000)}
@@ -391,7 +399,22 @@ export const RatesTable = () => {
                           </div>
                           <div className="text-[11px] text-emerald-300 font-medium mt-0.5">
                             {formatPrice(quotedRate1000)}/kg
-                            <span className="text-[10px] text-emerald-400/80 font-sans ml-1">(+$200/MT incl.)</span>
+                          </div>
+                        </td>
+
+                        {/* Available Flight Space Left */}
+                        <td className="py-3 px-3 text-center">
+                          <div className="inline-flex flex-col items-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
+                              spaceMT <= 8 
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}>
+                              📦 {spaceMT} MT Left
+                            </span>
+                            <span className="text-[9px] text-slate-400 mt-0.5">
+                              {spaceMT <= 8 ? 'Filling Fast' : 'Verified Open'}
+                            </span>
                           </div>
                         </td>
 
@@ -452,26 +475,18 @@ export const RatesTable = () => {
                       {/* Expandable Breakdown Drawer */}
                       {isExpanded && (
                         <tr className="bg-slate-900/90 border-b border-slate-800">
-                          <td colSpan="10" className="p-4 sm:p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                          <td colSpan="11" className="p-4 sm:p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                               {/* Surcharges & Rate Composition Breakdown */}
                               <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
                                 <div className="font-bold text-slate-200 mb-2 flex items-center justify-between">
                                   <span>Produce Rate Breakdown</span>
-                                  <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">+$0.20/kg (+$200/MT) Active</span>
+                                  <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">Verified Spot Rate</span>
                                 </div>
                                 <div className="space-y-1.5 font-mono">
                                   <div className="flex justify-between text-slate-400">
-                                    <span>Airline Base (+1000kg):</span>
-                                    <span className="text-white font-semibold">{formatPrice(item.rate1000kg)}/kg • {formatPrice(item.rate1000kg * 1000)}/MT</span>
-                                  </div>
-                                  <div className="flex justify-between text-emerald-400">
-                                    <span>Markup (+1 MT):</span>
-                                    <span className="font-bold">+${profitMarginPerKg.toFixed(2)}/kg • +${(profitMarginPerKg * 1000).toFixed(0)}.00/MT</span>
-                                  </div>
-                                  <div className="flex justify-between text-slate-300 font-semibold">
-                                    <span>Quoted Price (+1000kg):</span>
-                                    <span className="text-emerald-300">{formatPrice(quotedRate1000 * 1000)}/MT ({formatPrice(quotedRate1000)}/kg)</span>
+                                    <span>Base Rate (+1000kg):</span>
+                                    <span className="text-white font-semibold">{formatPrice(quotedRate1000)}/kg • {formatPrice(quotedRate1000 * 1000)}/MT</span>
                                   </div>
                                   <div className="flex justify-between text-slate-400">
                                     <span>Fuel Surcharge (FSC):</span>
@@ -486,8 +501,37 @@ export const RatesTable = () => {
                                     <span className="text-sky-300">{formatPrice(item.handlingFee)}/kg • {formatPrice(item.handlingFee * 1000)}/MT</span>
                                   </div>
                                   <div className="pt-2 border-t border-slate-800 flex justify-between font-bold text-emerald-400">
-                                    <span>Total Landed Selling Rate:</span>
+                                    <span>Total Landed Rate:</span>
                                     <span>{formatPrice(allInPerKg * 1000)} / MT ({formatPrice(allInPerKg)} / kg)</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Airline Cargo Hold & Space Verification Card */}
+                              <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+                                <div className="font-bold text-slate-200 mb-2 flex items-center justify-between">
+                                  <span className="flex items-center gap-1.5 text-sky-400">
+                                    <Plane className="w-4 h-4" />
+                                    <span>Space Verification</span>
+                                  </span>
+                                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded border ${
+                                    spaceMT <= 8 ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                  }`}>
+                                    {spaceMT} MT Available
+                                  </span>
+                                </div>
+                                <div className="space-y-1.5 text-slate-300">
+                                  <div>
+                                    <span className="text-slate-500">Aircraft:</span> <span className="text-white font-semibold">{airline.fleet || 'Widebody Cargo Hold'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Hold Space Left:</span> <span className="text-emerald-300 font-bold font-mono">{spaceMT} Metric Tons</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Status:</span> <span className={spaceMT <= 8 ? 'text-amber-400 font-semibold' : 'text-emerald-400 font-semibold'}>{spaceMT <= 8 ? 'Hold Filling Fast • Reserve Now' : 'Verified Available'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-500">Advance Notice:</span> <span className="text-sky-300">Quote 3 Days Ahead</span>
                                   </div>
                                 </div>
                               </div>
@@ -496,7 +540,7 @@ export const RatesTable = () => {
                               <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
                                 <div className="font-bold text-slate-200 mb-2 flex items-center gap-1.5 text-emerald-400">
                                   <ThermometerSnowflake className="w-4 h-4" />
-                                  <span>Cold Chain & Air Logistics</span>
+                                  <span>Cold Chain & Hold Temp</span>
                                 </div>
                                 <div className="space-y-1.5 text-slate-300">
                                   <div>
@@ -519,10 +563,10 @@ export const RatesTable = () => {
                                 <div>
                                   <div className="font-bold text-slate-200 mb-1 flex items-center gap-1">
                                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                    <span>Export Documents Included</span>
+                                    <span>Origin Documents Vault</span>
                                   </div>
                                   <p className="text-slate-400 text-[11px] leading-relaxed">
-                                    Bookings automatically include digital <strong>Air Waybill (BL)</strong>, <strong>KEPHIS Phytosanitary Certificate</strong>, and <strong>Packing List</strong> verification.
+                                    Upload <strong>Commercial Invoice</strong>, <strong>Packing List</strong> & <strong>KEPHIS Certificate</strong> to generate the official Air Waybill (AWB).
                                   </p>
                                 </div>
                                 <div className="mt-3 flex gap-2">
@@ -537,7 +581,7 @@ export const RatesTable = () => {
                                     className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-medium rounded-lg text-xs border border-emerald-500/20 transition-all flex items-center gap-1"
                                   >
                                     <FolderLock className="w-3.5 h-3.5" />
-                                    <span>Documents</span>
+                                    <span>Uploads</span>
                                   </button>
                                 </div>
                               </div>

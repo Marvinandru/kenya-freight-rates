@@ -105,7 +105,7 @@ export const OrderApprovalModal = () => {
             <div>
               <span className="text-slate-500 block text-[10px]">Quoted Rate / MT</span>
               <span className="text-emerald-400 font-bold text-sm">{formatUSD(shp.quotedRatePerKg * 1000)}/MT</span>
-              <span className="text-[10px] text-emerald-300/80 block font-normal">{formatUSD(shp.quotedRatePerKg)}/KG (incl. +$200/MT)</span>
+              <span className="text-[10px] text-emerald-300/80 block font-normal">{formatUSD(shp.quotedRatePerKg)}/KG • Bulk Rate</span>
             </div>
             <div>
               <span className="text-slate-500 block text-[10px]">Flight Departure</span>

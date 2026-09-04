@@ -98,7 +98,7 @@ export const HeroBanner = () => {
             </h1>
 
             <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-              Compare verified daily air cargo spot rates from <strong className="text-white font-medium">Nairobi (JKIA - NBO)</strong> across international airlines to Kuwait, Kazakhstan, Italy, Europe, Middle East & Asia. All quoted rates include the $0.20/kg ($200.00/MT) markup.
+              Compare verified daily air cargo spot rates from <strong className="text-white font-medium">Nairobi (JKIA - NBO)</strong> across international airlines to Kuwait, Kazakhstan, Italy, Europe, Middle East & Asia. Real-time temperature-controlled hold rates.
             </p>
 
             {/* Quick Action Badges */}
@@ -144,7 +144,7 @@ export const HeroBanner = () => {
                 {formatPrice(minAvocadoRate * 1000)}
                 <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-emerald-400/90 mt-1 font-mono font-medium">{formatPrice(minAvocadoRate)}/kg (+$200/MT incl.)</p>
+              <p className="text-[11px] text-emerald-400/90 mt-1 font-mono font-medium">{formatPrice(minAvocadoRate)}/kg • Bulk Rate</p>
             </div>
 
             {/* KPI 2: Soya Beans & Legumes */}
@@ -159,7 +159,7 @@ export const HeroBanner = () => {
                 {formatPrice(minSoyaRate * 1000)}
                 <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-teal-400/90 mt-1 font-mono font-medium">{formatPrice(minSoyaRate)}/kg (+$200/MT incl.)</p>
+              <p className="text-[11px] text-teal-400/90 mt-1 font-mono font-medium">{formatPrice(minSoyaRate)}/kg • Bulk Rate</p>
             </div>
 
             {/* KPI 3: Fresh Chillies */}
@@ -174,7 +174,7 @@ export const HeroBanner = () => {
                 {formatPrice(minChilliRate * 1000)}
                 <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-rose-400/90 mt-1 font-mono font-medium">{formatPrice(minChilliRate)}/kg (+$200/MT incl.)</p>
+              <p className="text-[11px] text-rose-400/90 mt-1 font-mono font-medium">{formatPrice(minChilliRate)}/kg • Bulk Rate</p>
             </div>
 
             {/* KPI 4: Produce Lanes */}

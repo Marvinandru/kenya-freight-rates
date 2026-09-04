@@ -15,7 +15,8 @@ import {
   Leaf,
   FolderLock,
   User,
-  LogOut
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -62,8 +63,9 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3 text-[11px]">
-            <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-              +$0.20/kg (+$200/MT) Markup Active
+            <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              Verified Airline Spot Space
             </span>
             <div className="text-slate-400">
               <span>USD/KES: </span>

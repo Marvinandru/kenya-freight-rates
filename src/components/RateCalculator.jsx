@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRates } from '../context/RatesContext';
+import { getAvailableFlightSpaceMT } from '../data/initialRates';
 import { 
   Calculator, 
   Box, 
@@ -159,6 +160,8 @@ export const RateCalculator = () => {
       const effectiveAllInPerKg = grandTotalUSD / (chargeableWeight || 1);
       const effectiveAllInPerMT = effectiveAllInPerKg * 1000;
 
+      const spaceAvailableMT = getAvailableFlightSpaceMT(item);
+
       return {
         ...item,
         airlineName: airline.name,
@@ -169,6 +172,7 @@ export const RateCalculator = () => {
         quotedRatePerKg,
         quotedRatePerMT,
         markupPerMTApplied,
+        spaceAvailableMT,
         totalBaseFreight,
         totalFuel,
         totalSecurity,
@@ -201,8 +205,8 @@ export const RateCalculator = () => {
 🎯 *Chargeable Weight:* ${chargeableWeight} KG (${weightInMT} MT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✈️ *Airline Carrier:* ${carrier.airlineName} (${carrier.airlineCode})
-💰 *Quoted Price / MT:* $${carrier.quotedRatePerMT.toLocaleString()} / MT ($${carrier.quotedRatePerKg.toFixed(2)} / KG)
-✨ *Markup Included:* +$0.20 / KG (+$200.00 USD / Metric Ton)
+💰 *Quoted Rate / MT:* $${carrier.quotedRatePerMT.toLocaleString()} / MT ($${carrier.quotedRatePerKg.toFixed(2)} / KG)
+📦 *Available Cargo Space:* ${carrier.spaceAvailableMT} MT Left on Flight (Verified)
 ⛽ *FSC Fuel + SSC Security:* $${((carrier.fuelSurcharge || 0) + (carrier.secSurcharge || 0)).toFixed(2)} / KG
 💵 *Total Landed Air Freight:* $${carrier.grandTotalUSD.toFixed(2)} USD (All-In: $${carrier.effectiveAllInPerMT.toFixed(2)} / MT • $${carrier.effectiveAllInPerKg.toFixed(2)} / KG)
 ⏱️ *Transit Duration:* ${carrier.transitTime} | ${carrier.frequency}
@@ -287,19 +291,26 @@ export const RateCalculator = () => {
                   onChange={(e) => setDestination(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"
                 >
-                  <optgroup label="Europe (Direct & Hubs)">
+                  <optgroup label="Middle East & Gulf (Kuwait, UAE, Qatar, Saudi)">
+                    <option value="KWI">Kuwait City, Kuwait (KWI - Kuwait Intl)</option>
+                    <option value="DXB">Dubai, UAE (DXB - International)</option>
+                    <option value="DOH">Doha, Qatar (DOH - Hamad)</option>
+                    <option value="JED">Jeddah, Saudi Arabia (JED - King Abdulaziz)</option>
+                    <option value="RUH">Riyadh, Saudi Arabia (RUH - King Khalid)</option>
+                    <option value="SHJ">Sharjah, UAE (SHJ)</option>
+                  </optgroup>
+                  <optgroup label="Central Asia & CIS (Kazakhstan)">
+                    <option value="ALA">Almaty, Kazakhstan (ALA - Almaty Intl)</option>
+                    <option value="NQZ">Astana, Kazakhstan (NQZ - Nursultan Nazarbayev)</option>
+                  </optgroup>
+                  <optgroup label="Europe (Italy, Netherlands, UK, Germany, France)">
+                    <option value="MXP">Milan, Italy (MXP - Malpensa Intl)</option>
+                    <option value="FCO">Rome, Italy (FCO - Leonardo da Vinci–Fiumicino)</option>
                     <option value="AMS">Amsterdam, Netherlands (AMS - Schiphol)</option>
                     <option value="LHR">London Heathrow, UK (LHR)</option>
                     <option value="FRA">Frankfurt, Germany (FRA)</option>
                     <option value="BRU">Brussels, Belgium (BRU)</option>
                     <option value="CDG">Paris, France (CDG)</option>
-                  </optgroup>
-                  <optgroup label="Middle East">
-                    <option value="DXB">Dubai, UAE (DXB)</option>
-                    <option value="DOH">Doha, Qatar (DOH)</option>
-                    <option value="JED">Jeddah, Saudi Arabia (JED)</option>
-                    <option value="RUH">Riyadh, Saudi Arabia (RUH)</option>
-                    <option value="SHJ">Sharjah, UAE (SHJ)</option>
                   </optgroup>
                   <optgroup label="Asia & Far East">
                     <option value="CAN">Guangzhou, China (CAN)</option>
@@ -524,8 +535,12 @@ export const RateCalculator = () => {
                             <span className="text-[10px] font-mono font-bold bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
                               {carrier.tierApplied}
                             </span>
-                            <span className="text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                              +$200/MT ($0.20/kg) Markup Incl.
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                              carrier.spaceAvailableMT <= 8
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}>
+                              📦 {carrier.spaceAvailableMT} MT Space Available
                             </span>
                           </div>
                           <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2 font-mono">
@@ -586,7 +601,7 @@ export const RateCalculator = () => {
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
                       <div className="text-[11px] text-slate-400 flex items-center gap-1">
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Valid for Today’s Produce Booking • Includes +$200/MT Markup</span>
+                        <span>Valid for Today’s Produce Booking • Advance Booking Space Assurance</span>
                       </div>
 
                       <div className="flex items-center gap-2">

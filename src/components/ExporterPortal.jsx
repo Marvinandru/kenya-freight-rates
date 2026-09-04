@@ -38,6 +38,7 @@ export const ExporterPortal = () => {
     createShipment,
     triggerApprovalNotice,
     rates, 
+    airlines,
     profitMarginPerKg,
     currencyMode,
     exchangeRate,
@@ -54,13 +55,16 @@ export const ExporterPortal = () => {
   const [docIssuer, setDocIssuer] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null);
 
-  // New Shipment Booking State
+  // New Shipment Booking State with Required Origin Trade Docs
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [newOrigin, setNewOrigin] = useState('NBO');
   const [newDest, setNewDest] = useState('AMS');
   const [newCommodity, setNewCommodity] = useState('avocados');
   const [newWeight, setNewWeight] = useState(1800);
   const [newCarrier, setNewCarrier] = useState('KQ');
+  const [invoiceFile, setInvoiceFile] = useState(null);
+  const [packingListFile, setPackingListFile] = useState(null);
+  const [kephisFile, setKephisFile] = useState(null);
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectedDocPreview, setSelectedDocPreview] = useState(null);
@@ -119,22 +123,86 @@ export const ExporterPortal = () => {
   const handleBookingSubmit = (e) => {
     e.preventDefault();
     const rateItem = rates.find(r => r.origin === newOrigin && r.destination === newDest && r.commodity === newCommodity) || rates[0];
-    
+    const weight = Number(newWeight) || 1000;
+    const baseRate = rateItem.rate1000kg || 1.70;
+    const sellingRate = Number((baseRate + profitMarginPerKg).toFixed(2));
+    const airlineName = airlines?.find(a => a.id === newCarrier)?.name || (
+      newCarrier === 'KQ' ? 'Kenya Airways Cargo' : 
+      newCarrier === '8V' ? 'Astral Aviation' : 
+      newCarrier === 'KU' ? 'Kuwait Airways' : 
+      newCarrier === 'KC' ? 'Air Astana Cargo' : 
+      newCarrier === 'AZ' ? 'ITA Airways Cargo' : 
+      newCarrier === 'TK' ? 'Turkish Cargo' : 'Emirates SkyCargo'
+    );
+
+    const uploadedDocs = [
+      {
+        id: `DOC-INV-${Date.now()}`,
+        type: 'commercial_invoice',
+        name: `Commercial Invoice (Consignment #${Math.floor(1000 + Math.random() * 9000)})`,
+        fileName: invoiceFile ? invoiceFile.name : `Commercial_Invoice_${newCommodity}_${weight}kg.pdf`,
+        fileSize: invoiceFile ? `${(invoiceFile.size / 1024).toFixed(0)} KB` : '310 KB',
+        uploadedAt: 'Just Now',
+        verified: true,
+        issuer: currentUser?.companyName || 'Packhouse Exporter',
+        icon: 'FileText'
+      },
+      {
+        id: `DOC-PKL-${Date.now()}`,
+        type: 'packing_list',
+        name: `Export Packing List & Weight Certificate (${weight} KG)`,
+        fileName: packingListFile ? packingListFile.name : `Packing_List_${newCommodity}_${weight}kg.pdf`,
+        fileSize: packingListFile ? `${(packingListFile.size / 1024).toFixed(0)} KB` : '240 KB',
+        uploadedAt: 'Just Now',
+        verified: true,
+        issuer: currentUser?.companyName || 'Packhouse Exporter',
+        icon: 'Box'
+      },
+      {
+        id: `DOC-KPH-${Date.now()}`,
+        type: 'kephis',
+        name: `KEPHIS Phytosanitary Clearance Certificate`,
+        fileName: kephisFile ? kephisFile.name : `KEPHIS_Phytosanitary_${newOrigin}_JKIA.pdf`,
+        fileSize: kephisFile ? `${(kephisFile.size / 1024).toFixed(0)} KB` : '420 KB',
+        uploadedAt: 'Just Now',
+        verified: true,
+        issuer: 'KEPHIS Plant Inspection Unit',
+        icon: 'ShieldCheck'
+      },
+      {
+        id: `DOC-AWB-${Date.now()}`,
+        type: 'awb',
+        name: `Air Waybill (BL) - Processing from Origin Docs`,
+        fileName: `AWB_${newCarrier}_Draft_In_Progress.pdf`,
+        fileSize: '380 KB',
+        uploadedAt: 'Pending Issuance',
+        verified: false,
+        issuer: 'AeroProduce Cargo Desk',
+        icon: 'Plane'
+      }
+    ];
+
     const newShp = createShipment({
       origin: newOrigin,
       destination: newDest,
       commodity: newCommodity,
-      commodityName: newCommodity === 'avocados' ? 'Hass Avocados (Size 14-20)' : newCommodity === 'soya_beans' ? 'Fresh Soya & French Beans' : 'Fresh Chillies',
+      commodityName: newCommodity === 'avocados' ? 'Hass Avocados (Size 14-20)' : newCommodity === 'soya_beans' ? 'Fresh Soya & French Beans' : newCommodity === 'chillies' ? 'Fresh Bird’s Eye Chillies' : 'Fresh Herbs & Vegetables',
       airlineId: newCarrier,
-      airlineName: newCarrier === 'KQ' ? 'Kenya Airways Cargo' : newCarrier === '8V' ? 'Astral Aviation' : 'Emirates SkyCargo',
+      airlineName: airlineName,
       airlineCode: newCarrier,
-      grossWeight: Number(newWeight),
-      chargeableWeight: Number(newWeight),
-      baseRatePerKg: rateItem.rate1000kg || 1.70,
-      flightDate: '3 Days Ahead (Space Confirmed)'
+      grossWeight: weight,
+      chargeableWeight: weight,
+      baseRatePerKg: baseRate,
+      grandTotalUSD: Number((sellingRate * weight).toFixed(2)),
+      flightDate: '3 Days Ahead (Space Confirmed)',
+      status: 'Documents Uploaded • AWB Review',
+      documents: uploadedDocs
     }, true);
 
     setIsBookingModalOpen(false);
+    setInvoiceFile(null);
+    setPackingListFile(null);
+    setKephisFile(null);
     if (newShp?.id) {
       setActiveShipmentId(newShp.id);
     }
@@ -551,147 +619,317 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
         </div>
       )}
 
-      {/* MODAL 2: Book New Produce Shipment */}
-      {isBookingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-panel w-full max-w-lg rounded-3xl border border-slate-700 shadow-2xl overflow-hidden bg-slate-950">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  <Plane className="w-5 h-5 -rotate-45" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-base">Book Produce Air Cargo Space</h3>
-                  <p className="text-[11px] text-slate-400">
-                    Instantly generates Air Waybill (BL) draft and packing list record
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsBookingModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-              >
-                ✕
-              </button>
-            </div>
+      {/* MODAL 2: Book New Produce Shipment & Upload Origin Documents */}
+      {isBookingModalOpen && (() => {
+        const bookingRateItem = rates.find(r => r.origin === newOrigin && r.destination === newDest && r.commodity === newCommodity) || rates[0];
+        const bookingWeightNum = Number(newWeight) || 1000;
+        const bookingBaseRate = bookingRateItem?.rate1000kg || 1.70;
+        const bookingSellingRatePerKg = Number((bookingBaseRate + profitMarginPerKg).toFixed(2));
+        const bookingSellingRatePerMT = Number((bookingSellingRatePerKg * 1000).toFixed(2));
+        const bookingTotalFreight = Number((bookingSellingRatePerKg * bookingWeightNum).toFixed(2));
 
-            <form onSubmit={handleBookingSubmit} className="p-6 space-y-4 text-xs">
-              {/* 3 Days Advance Quote Notice Banner */}
-              <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-500/30 flex items-start gap-2.5 text-[11px] text-sky-200">
-                <Calendar className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-white block">3-Day Advance Quoting Policy:</span>
-                  Please request quotes and confirm bookings at least 3 days in advance to be assured of flight space. All payments must be completed in advance via USD bank wire prior to cold-store intake.
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
+            <div className="glass-panel w-full max-w-xl rounded-3xl border border-slate-700 shadow-2xl overflow-hidden bg-slate-950 my-8">
+              <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">Book Cargo Space & Upload Documents</h3>
+                    <p className="text-[11px] text-slate-400">
+                      Upload origin documents used to generate and issue the official Air Waybill (AWB)
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Departure</label>
-                  <select
-                    value={newOrigin}
-                    onChange={(e) => setNewOrigin(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white"
-                  >
-                    <option value="NBO">Nairobi (JKIA - NBO)</option>
-                    <option value="MBA">Mombasa (MBA)</option>
-                    <option value="EDL">Eldoret (EDL)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Destination</label>
-                  <select
-                    value={newDest}
-                    onChange={(e) => setNewDest(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white"
-                  >
-                    <option value="AMS">Amsterdam, Netherlands (AMS)</option>
-                    <option value="LHR">London Heathrow, UK (LHR)</option>
-                    <option value="FRA">Frankfurt, Germany (FRA)</option>
-                    <option value="BRU">Brussels, Belgium (BRU)</option>
-                    <option value="DXB">Dubai, UAE (DXB)</option>
-                    <option value="JED">Jeddah, Saudi Arabia (JED)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Produce Commodity</label>
-                  <select
-                    value={newCommodity}
-                    onChange={(e) => setNewCommodity(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white"
-                  >
-                    <option value="avocados">🥑 Fresh Avocados</option>
-                    <option value="soya_beans">🫘 Soya Beans & Legumes</option>
-                    <option value="chillies">🌶️ Fresh Chillies</option>
-                    <option value="herbs_veg">🌿 Fresh Herbs & Vegetables</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Preferred Carrier</label>
-                  <select
-                    value={newCarrier}
-                    onChange={(e) => setNewCarrier(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white"
-                  >
-                    <option value="KQ">Kenya Airways Cargo (KQ)</option>
-                    <option value="8V">Astral Aviation (8V)</option>
-                    <option value="EK">Emirates SkyCargo (EK)</option>
-                    <option value="ET">Ethiopian Cargo (ET)</option>
-                    <option value="QR">Qatar Airways Cargo (QR)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Total Cargo Weight (KG)</label>
-                <input
-                  type="number"
-                  min="100"
-                  step="50"
-                  value={newWeight}
-                  onChange={(e) => setNewWeight(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-mono text-sm focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-slate-300 space-y-1 text-[11px]">
-                <div className="flex justify-between">
-                  <span>Base Airline Rate:</span>
-                  <span className="font-mono text-white">$1.70 / kg</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Service & Freight Margin:</span>
-                  <span className="font-mono text-emerald-400 font-bold">+${profitMarginPerKg.toFixed(2)} / kg</span>
-                </div>
-                <div className="flex justify-between pt-1 border-t border-slate-800 font-bold text-emerald-400">
-                  <span>Quoted Selling Rate:</span>
-                  <span className="font-mono">${(1.70 + profitMarginPerKg).toFixed(2)} / kg</span>
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
                 <button
-                  type="button"
                   onClick={() => setIsBookingModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold"
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg"
-                >
-                  Confirm Booking & Issue AWB Draft
+                  ✕
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleBookingSubmit} className="p-6 space-y-4 text-xs max-h-[82vh] overflow-y-auto pr-2">
+                {/* 3 Days Advance Quote Notice Banner */}
+                <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-500/30 flex items-start gap-2.5 text-[11px] text-sky-200">
+                  <Calendar className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-white block">3-Day Advance Quoting Policy & Advance Wire:</span>
+                    Please request quotes and confirm bookings at least 3 days in advance to be assured of flight space. All payments must be completed in advance via USD bank wire prior to cold-store intake.
+                  </div>
+                </div>
+
+                {/* Origin and Destination Dropdowns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Origin Airport (Kenya)</label>
+                    <select
+                      value={newOrigin}
+                      onChange={(e) => setNewOrigin(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="NBO">Nairobi (JKIA - NBO)</option>
+                      <option value="MBA">Mombasa (MBA)</option>
+                      <option value="EDL">Eldoret (EDL)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Destination Airport</label>
+                    <select
+                      value={newDest}
+                      onChange={(e) => setNewDest(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                    >
+                      <optgroup label="Middle East & Gulf (Kuwait, UAE, Saudi, Qatar)">
+                        <option value="KWI">Kuwait City, Kuwait (KWI)</option>
+                        <option value="DXB">Dubai, UAE (DXB)</option>
+                        <option value="DOH">Doha, Qatar (DOH)</option>
+                        <option value="JED">Jeddah, Saudi Arabia (JED)</option>
+                        <option value="RUH">Riyadh, Saudi Arabia (RUH)</option>
+                      </optgroup>
+                      <optgroup label="Central Asia & CIS (Kazakhstan)">
+                        <option value="ALA">Almaty, Kazakhstan (ALA)</option>
+                        <option value="NQZ">Astana, Kazakhstan (NQZ)</option>
+                      </optgroup>
+                      <optgroup label="Europe (Italy, Netherlands, UK, Germany, France)">
+                        <option value="MXP">Milan, Italy (MXP)</option>
+                        <option value="FCO">Rome, Italy (FCO)</option>
+                        <option value="AMS">Amsterdam, Netherlands (AMS)</option>
+                        <option value="LHR">London Heathrow, UK (LHR)</option>
+                        <option value="FRA">Frankfurt, Germany (FRA)</option>
+                        <option value="BRU">Brussels, Belgium (BRU)</option>
+                        <option value="CDG">Paris, France (CDG)</option>
+                      </optgroup>
+                      <optgroup label="Asia & Americas">
+                        <option value="CAN">Guangzhou, China (CAN)</option>
+                        <option value="BOM">Mumbai, India (BOM)</option>
+                        <option value="JFK">New York, USA (JFK)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Commodity & Preferred Carrier */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Produce Commodity</label>
+                    <select
+                      value={newCommodity}
+                      onChange={(e) => setNewCommodity(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="avocados">🥑 Fresh Avocados</option>
+                      <option value="soya_beans">🫘 Soya Beans & Legumes</option>
+                      <option value="chillies">🌶️ Fresh Chillies</option>
+                      <option value="herbs_veg">🌿 Fresh Herbs & Vegetables</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Preferred Carrier</label>
+                    <select
+                      value={newCarrier}
+                      onChange={(e) => setNewCarrier(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="KQ">Kenya Airways Cargo (KQ)</option>
+                      <option value="8V">Astral Aviation (8V)</option>
+                      <option value="KU">Kuwait Airways (KU)</option>
+                      <option value="KC">Air Astana Cargo (KC)</option>
+                      <option value="AZ">ITA Airways Cargo (AZ)</option>
+                      <option value="TK">Turkish Cargo (TK)</option>
+                      <option value="EK">Emirates SkyCargo (EK)</option>
+                      <option value="ET">Ethiopian Cargo (ET)</option>
+                      <option value="QR">Qatar Airways Cargo (QR)</option>
+                      <option value="SV">Saudia Cargo (SV)</option>
+                      <option value="LH">Lufthansa Cargo (LH)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Cargo Weight */}
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Total Cargo Weight (KG)</label>
+                  <input
+                    type="number"
+                    min="100"
+                    step="50"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* ORIGIN DOCUMENTS UPLOAD SECTION (Mandated to generate AWB) */}
+                <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-emerald-400" />
+                      <span className="font-bold text-white text-xs">Origin Trade Documents (Used to Generate Air Waybill)</span>
+                    </div>
+                    <span className="text-[10px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+                      Required for AWB
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Cargo agents generate and file the Master Air Waybill (AWB) using your <strong>Commercial Invoice</strong>, <strong>Packing List</strong>, and <strong>KEPHIS Phytosanitary Certificate</strong>:
+                  </p>
+
+                  <div className="space-y-2.5">
+                    {/* 1. Commercial Invoice */}
+                    <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-emerald-500/40 transition-all">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-slate-200 font-semibold text-xs flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>1. Commercial Invoice</span>
+                          <span className="text-rose-400 font-bold">*</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400">Consignee, FOB/CIF value & HS code</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="file"
+                          id="invoice-file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={(e) => setInvoiceFile(e.target.files[0])}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="invoice-file"
+                          className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-all"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{invoiceFile ? invoiceFile.name : 'Upload Commercial Invoice (PDF/Image)'}</span>
+                        </label>
+                        {invoiceFile ? (
+                          <span className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> Attached
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 text-[10px]">Or attach during packhouse dispatch</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. Packing List */}
+                    <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-teal-500/40 transition-all">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-slate-200 font-semibold text-xs flex items-center gap-1.5">
+                          <Box className="w-3.5 h-3.5 text-teal-400" />
+                          <span>2. Export Packing List</span>
+                          <span className="text-rose-400 font-bold">*</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400">Pallet breakdown, gross/net weight</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="file"
+                          id="packing-file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={(e) => setPackingListFile(e.target.files[0])}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="packing-file"
+                          className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-all"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-teal-400" />
+                          <span>{packingListFile ? packingListFile.name : 'Upload Packing List (PDF/Image)'}</span>
+                        </label>
+                        {packingListFile ? (
+                          <span className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> Attached
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 text-[10px]">Required to calculate chargeable weight</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 3. KEPHIS Phytosanitary Certificate */}
+                    <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-sky-500/40 transition-all">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-slate-200 font-semibold text-xs flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
+                          <span>3. KEPHIS Phytosanitary Certificate</span>
+                          <span className="text-rose-400 font-bold">*</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400">Plant health & pest-free clearance</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="file"
+                          id="kephis-file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={(e) => setKephisFile(e.target.files[0])}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="kephis-file"
+                          className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-all"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-sky-400" />
+                          <span>{kephisFile ? kephisFile.name : 'Upload KEPHIS Certificate (PDF)'}</span>
+                        </label>
+                        {kephisFile ? (
+                          <span className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> Attached
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 text-[10px]">EU/Gulf quarantine compliance certificate</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* All-Inclusive Produce Freight Pricing (Markup strictly included in total price) */}
+                <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-slate-300 space-y-1.5 text-[11px]">
+                  <div className="flex justify-between">
+                    <span>Quoted Produce Freight Rate:</span>
+                    <span className="font-mono text-emerald-400 font-bold">
+                      ${bookingSellingRatePerKg.toFixed(2)} / kg (${bookingSellingRatePerMT.toLocaleString()} / MT)
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Chargeable Cargo Weight:</span>
+                    <span className="font-mono text-white">{bookingWeightNum} KG ({(bookingWeightNum / 1000).toFixed(2)} MT)</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-slate-800 font-bold text-emerald-400 text-xs">
+                    <span>Estimated Freight Total:</span>
+                    <span className="font-mono">${bookingTotalFreight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 flex items-center gap-1 pt-0.5">
+                    <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <span>Advance USD bank wire required prior to airport intake. Once origin documents are submitted, your official Air Waybill (AWB) is drafted.</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsBookingModalOpen(false)}
+                    className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg flex items-center gap-2 transition-all active:scale-95 text-xs"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Submit Origin Documents & Book Cargo</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

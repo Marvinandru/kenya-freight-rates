@@ -417,36 +417,60 @@ export const RatesProvider = ({ children }) => {
       grandTotalUSD: Number(shipmentData.grandTotalUSD || (quotedRate * weight).toFixed(2)),
       flightNumber: shipmentData.flightNumber || `${airlineCode} ${Math.floor(100 + Math.random() * 900)}`,
       flightDate: shipmentData.flightDate || 'Tomorrow',
-      status: 'Approved • Advance Payment Pending',
-      statusColor: 'emerald',
-      paymentStatus: 'Pending Advance USD Wire',
+      status: shipmentData.status || 'Documents Uploaded • AWB Review',
+      statusColor: shipmentData.statusColor || 'emerald',
+      paymentStatus: shipmentData.paymentStatus || 'Pending Advance USD Wire',
       paymentMethod: 'USD Bank Wire',
       approvedAt: formatProduceDate(new Date()),
       createdAt: 'Just Now',
-      documents: [
-        {
-          id: `DOC-AWB-${Date.now()}`,
-          type: 'awb',
-          name: `Air Waybill / BL Draft (${awb})`,
-          fileName: `AWB_${awb.replace(/-/g, '_')}_Draft.pdf`,
-          fileSize: '380 KB',
-          uploadedAt: 'Just Now',
-          verified: false,
-          issuer: 'AeroProduce Cargo Desk',
-          icon: 'FileText'
-        },
-        {
-          id: `DOC-PKL-${Date.now()}`,
-          type: 'packing_list',
-          name: 'Export Packing List & Weight Certificate',
-          fileName: `PackingList_${shipmentData.commodity}_${weight}kg.pdf`,
-          fileSize: '240 KB',
-          uploadedAt: 'Just Now',
-          verified: true,
-          issuer: currentUser?.companyName || 'Packhouse Exporter',
-          icon: 'Box'
-        }
-      ]
+      documents: shipmentData.documents && shipmentData.documents.length > 0 
+        ? shipmentData.documents 
+        : [
+            {
+              id: `DOC-INV-${Date.now()}`,
+              type: 'commercial_invoice',
+              name: `Commercial Invoice (Consignment #${Math.floor(1000 + Math.random() * 9000)})`,
+              fileName: `Invoice_${shipmentData.commodity || 'produce'}_${weight}kg.pdf`,
+              fileSize: '310 KB',
+              uploadedAt: 'Just Now',
+              verified: true,
+              issuer: currentUser?.companyName || 'Packhouse Exporter',
+              icon: 'FileText'
+            },
+            {
+              id: `DOC-PKL-${Date.now()}`,
+              type: 'packing_list',
+              name: 'Export Packing List & Weight Specification',
+              fileName: `PackingList_${shipmentData.commodity || 'produce'}_${weight}kg.pdf`,
+              fileSize: '240 KB',
+              uploadedAt: 'Just Now',
+              verified: true,
+              issuer: currentUser?.companyName || 'Packhouse Exporter',
+              icon: 'Box'
+            },
+            {
+              id: `DOC-KPH-${Date.now()}`,
+              type: 'kephis',
+              name: `KEPHIS Phyto Certificate (#KE-2026-${Math.floor(1000 + Math.random() * 9000)})`,
+              fileName: `KEPHIS_Certificate_${shipmentData.origin || 'NBO'}.pdf`,
+              fileSize: '410 KB',
+              uploadedAt: 'Just Now',
+              verified: true,
+              issuer: 'KEPHIS Plant Inspection Unit',
+              icon: 'ShieldCheck'
+            },
+            {
+              id: `DOC-AWB-${Date.now()}`,
+              type: 'awb',
+              name: `Air Waybill (BL) - Processing from Origin Docs`,
+              fileName: `AWB_${awb.replace(/-/g, '_')}_Draft.pdf`,
+              fileSize: '380 KB',
+              uploadedAt: 'Processing',
+              verified: false,
+              issuer: 'AeroProduce Cargo Desk',
+              icon: 'Plane'
+            }
+          ]
     };
 
     setShipments(prev => [newShipment, ...prev]);
