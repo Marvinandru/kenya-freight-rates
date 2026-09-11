@@ -1,4 +1,5 @@
 import React from 'react';
+import spedireLogo from '../assets/spedire-logo.jpg';
 import { Plane, ShieldCheck, HelpCircle, Mail, Phone, ExternalLink, Leaf } from 'lucide-react';
 
 export const Footer = () => {
@@ -8,14 +9,16 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Col 1 */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
-                <Plane className="w-4 h-4 -rotate-45" />
-              </div>
+            <a href="/" className="flex items-center gap-2.5 group">
+              <img 
+                src={spedireLogo} 
+                alt="Spedire Logo" 
+                className="h-8 w-8 rounded-lg object-cover border border-emerald-500/30 group-hover:border-emerald-400 transition-all" 
+              />
               <span className="font-extrabold text-white text-base">
                 Spedire <span className="text-emerald-400">Kenya</span>
               </span>
-            </div>
+            </a>
             <p className="text-slate-400 leading-relaxed text-[11px]">
               Kenya's premier fresh produce and meat air cargo booking & intelligence platform. Tracking daily freight rates (USD/kg) for Passion Fruit, Avocados, Mangoes, Chillies, Herbs, Pineapples, and Meat Exports connecting Nairobi (JKIA) to global destinations.
             </p>

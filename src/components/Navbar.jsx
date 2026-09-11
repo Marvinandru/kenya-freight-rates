@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRates } from '../context/RatesContext';
+import spedireLogo from '../assets/spedire-logo.jpg';
 import { 
   Plane, 
   Calculator, 
@@ -79,22 +80,28 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('rates')}>
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-sky-700 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/30">
-              <Plane className="w-5 h-5 text-white -rotate-45" />
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab('rates');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex items-center gap-3 cursor-pointer group"
+            title="Spedire Kenya - Fresh Produce & Meat Air Freight"
+          >
+            <img 
+              src={spedireLogo} 
+              alt="Spedire Logo" 
+              className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl object-cover shadow-lg shadow-emerald-500/20 border border-emerald-500/30 group-hover:border-emerald-400 transition-all shrink-0"
+            />
+            <div className="flex flex-col justify-center">
+              <span className="font-extrabold text-xl sm:text-2xl tracking-tight text-white leading-none">
+                Spe<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">dire</span>
+              </span>
+              <p className="text-[11px] text-slate-400 font-normal leading-tight mt-1">Fresh Produce & Meat Air Freight Gateway</p>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white bg-clip-text">
-                  Spe<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">dire</span>
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider font-mono">
-                  USD/KG • USD/MT
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-normal">Fresh Produce & Meat Air Freight Gateway</p>
-            </div>
-          </div>
+          </a>
 
           {/* Navigation Tabs */}
           <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
