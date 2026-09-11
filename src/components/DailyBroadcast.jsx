@@ -20,20 +20,16 @@ import {
 export const DailyBroadcast = () => {
   const { rates, lastUpdated, refreshToToday, isRefreshing, airlines, airports, commodities, getSellingRate, profitMarginPerKg, showNotification } = useRates();
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
-  const [broadcastCategory, setBroadcastCategory] = useState('avocados'); // 'avocados' | 'soya_beans' | 'chillies' | 'all'
+  const [broadcastCategory, setBroadcastCategory] = useState('all'); // 'all' | 'avocado' | 'passion_fruit' | 'mangoes' | 'chillies' | 'herbs' | 'pineapple' | 'meat_exports'
 
   // Generate WhatsApp / Telegram broadcast text
   const generateBroadcastText = () => {
     let filtered = rates;
-    if (broadcastCategory === 'avocados') {
-      filtered = rates.filter(r => r.commodity === 'avocados');
-    } else if (broadcastCategory === 'soya_beans') {
-      filtered = rates.filter(r => r.commodity === 'soya_beans');
-    } else if (broadcastCategory === 'chillies') {
-      filtered = rates.filter(r => r.commodity === 'chillies');
+    if (broadcastCategory !== 'all') {
+      filtered = rates.filter(r => r.commodity === broadcastCategory);
     }
 
-    let text = `🥑 *AEROPRODUCE KENYA | DAILY FRESH PRODUCE BULLETIN* 🇰🇪\n`;
+    let text = `✈️ *SPEDIRE KENYA | DAILY FRESH PRODUCE & MEAT BULLETIN* 🇰🇪\n`;
     text += `📅 *Date:* ${lastUpdated}\n`;
     text += `📍 *Origin:* Nairobi JKIA Cargo Hub (NBO)\n`;
     text += `🌱 *Category:* ${broadcastCategory.toUpperCase().replace('_', ' ')} AIR FREIGHT SPOT RATES\n`;
@@ -66,12 +62,12 @@ export const DailyBroadcast = () => {
     });
 
     text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `🌿 *Cold Chain:* Target +4°C (Avocados) | +8°C (Chillies)\n`;
-    text += `📑 *KEPHIS & EU FCM:* Pre-clearance ready at JKIA\n`;
+    text += `🌿 *Cold Chain:* Target +4°C (Avocados/Pineapple) | +8°C (Chillies) | 0°C to +2°C (Meat)\n`;
+    text += `📑 *KEPHIS, HCDA & Veterinary Health:* Pre-clearance ready at JKIA\n`;
     text += `💵 *Payment Terms:* 100% Advance Payment via USD Bank Wire\n`;
     text += `⏱️ *Advance Booking:* Quotes assured 3 days in advance\n`;
-    text += `📞 *Produce Export Bookings:* Contact JKIA Fresh Desk\n`;
-    text += `🔗 *Live Rate Dashboard:* AeroProduce Kenya`;
+    text += `📞 *Cargo Bookings:* Contact Spedire JKIA Operations\n`;
+    text += `🔗 *Live Rate Dashboard:* Spedire Kenya (https://spedire.co.ke)`;
 
     return text;
   };
@@ -80,7 +76,7 @@ export const DailyBroadcast = () => {
     const text = generateBroadcastText();
     navigator.clipboard.writeText(text);
     setCopiedWhatsApp(true);
-    showNotification('WhatsApp Fresh Produce Rate Sheet copied to clipboard!');
+    showNotification('WhatsApp Fresh Produce & Meat Rate Sheet copied to clipboard!');
     setTimeout(() => setCopiedWhatsApp(false), 3000);
   };
 
@@ -95,13 +91,13 @@ export const DailyBroadcast = () => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
             <Share2 className="w-3.5 h-3.5" />
-            <span>Produce Exporters Multi-Channel Broadcast</span>
+            <span>Produce & Meat Exporters Multi-Channel Broadcast</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Daily Produce Broadcast & Printable Rate Card
+            Daily Produce & Meat Broadcast & Printable Rate Card
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">
-            Share daily avocado, soya beans & chilli spot rates directly to farmer WhatsApp groups or print official rate cards.
+            Share daily avocado, passion fruit, mango, chillies, herbs, pineapple & meat export spot rates directly to exporter WhatsApp groups or print official rate cards.
           </p>
         </div>
 
@@ -141,10 +137,14 @@ export const DailyBroadcast = () => {
                   onChange={(e) => setBroadcastCategory(e.target.value)}
                   className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
                 >
-                  <option value="avocados">🥑 Fresh Avocados</option>
-                  <option value="soya_beans">🫘 Soya Beans & Legumes</option>
+                  <option value="all">🌍 All 7 Export Commodities</option>
+                  <option value="passion_fruit">🟣 Fresh Passion Fruit</option>
+                  <option value="avocado">🥑 Fresh Avocados</option>
+                  <option value="mangoes">🥭 Fresh Mangoes</option>
                   <option value="chillies">🌶️ Fresh Chillies</option>
-                  <option value="all">🌍 All Fresh Produce Lanes</option>
+                  <option value="herbs">🌿 Fresh Herbs</option>
+                  <option value="pineapple">🍍 Fresh Pineapples</option>
+                  <option value="meat_exports">🥩 Fresh Meat Exports</option>
                 </select>
 
                 <button
@@ -185,8 +185,8 @@ export const DailyBroadcast = () => {
                   <Leaf className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-sm text-white">AeroProduce Kenya Rate Card</h4>
-                  <p className="text-[11px] text-slate-400">JKIA Nairobi Fresh Produce Terminal</p>
+                  <h4 className="font-extrabold text-sm text-white">Spedire Kenya Rate Card</h4>
+                  <p className="text-[11px] text-slate-400">JKIA Nairobi Fresh Produce & Meat Cargo Terminal</p>
                 </div>
               </div>
               <div className="text-right text-[11px] font-mono text-slate-400">

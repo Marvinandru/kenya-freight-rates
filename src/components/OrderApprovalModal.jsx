@@ -186,7 +186,7 @@ export const OrderApprovalModal = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[11px] bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
                 <div>
                   <span className="text-slate-500 block text-[10px]">Beneficiary Name:</span>
-                  <span className="text-white font-bold">AeroProduce Kenya Cargo</span>
+                  <span className="text-white font-bold">Spedire Kenya Cargo</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">USD Account Number:</span>

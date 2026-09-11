@@ -59,7 +59,7 @@ export const ExporterPortal = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [newOrigin, setNewOrigin] = useState('NBO');
   const [newDest, setNewDest] = useState('AMS');
-  const [newCommodity, setNewCommodity] = useState('avocados');
+  const [newCommodity, setNewCommodity] = useState('avocado');
   const [newWeight, setNewWeight] = useState(1800);
   const [newCarrier, setNewCarrier] = useState('KQ');
   const [invoiceFile, setInvoiceFile] = useState(null);
@@ -126,14 +126,7 @@ export const ExporterPortal = () => {
     const weight = Number(newWeight) || 1000;
     const baseRate = rateItem.rate1000kg || 1.70;
     const sellingRate = Number((baseRate + profitMarginPerKg).toFixed(2));
-    const airlineName = airlines?.find(a => a.id === newCarrier)?.name || (
-      newCarrier === 'KQ' ? 'Kenya Airways Cargo' : 
-      newCarrier === '8V' ? 'Astral Aviation' : 
-      newCarrier === 'KU' ? 'Kuwait Airways' : 
-      newCarrier === 'KC' ? 'Air Astana Cargo' : 
-      newCarrier === 'AZ' ? 'ITA Airways Cargo' : 
-      newCarrier === 'TK' ? 'Turkish Cargo' : 'Emirates SkyCargo'
-    );
+    const airlineName = airlines?.find(a => a.id === newCarrier || a.code === newCarrier)?.name || 'Kenya Airways Cargo';
 
     const uploadedDocs = [
       {
@@ -177,16 +170,26 @@ export const ExporterPortal = () => {
         fileSize: '380 KB',
         uploadedAt: 'Pending Issuance',
         verified: false,
-        issuer: 'AeroProduce Cargo Desk',
+        issuer: 'Spedire Cargo Desk',
         icon: 'Plane'
       }
     ];
+
+    const commodityNames = {
+      passion_fruit: 'Passion Fruit',
+      avocado: 'Hass Avocados (Size 14-20)',
+      mangoes: 'Fresh Mangoes (Apple/Ngowe)',
+      chillies: 'Fresh Bird’s Eye Chillies',
+      herbs: 'Fresh Herbs (Basil/Mint)',
+      pineapple: 'Fresh Del Monte Pineapples',
+      meat_exports: 'Fresh Chilled Halal Meat'
+    };
 
     const newShp = createShipment({
       origin: newOrigin,
       destination: newDest,
       commodity: newCommodity,
-      commodityName: newCommodity === 'avocados' ? 'Hass Avocados (Size 14-20)' : newCommodity === 'soya_beans' ? 'Fresh Soya & French Beans' : newCommodity === 'chillies' ? 'Fresh Bird’s Eye Chillies' : 'Fresh Herbs & Vegetables',
+      commodityName: commodityNames[newCommodity] || newCommodity,
       airlineId: newCarrier,
       airlineName: airlineName,
       airlineCode: newCarrier,
@@ -209,7 +212,7 @@ export const ExporterPortal = () => {
   };
 
   const handleShareBundle = (shp) => {
-    const text = `📋 *AEROPRODUCE KENYA | EXPORT SHIPMENT DOCUMENTS* 📦\n` +
+    const text = `📋 *SPEDIRE KENYA | EXPORT SHIPMENT DOCUMENTS* 📦\n` +
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
       `✈️ *AWB / BL:* ${shp.awbNumber}\n` +
       `🏢 *Exporter:* ${shp.clientCompany}\n` +
@@ -228,7 +231,7 @@ export const ExporterPortal = () => {
 
   const handleDownloadDoc = (doc) => {
     // Generate a downloadable text/mock PDF file
-    const docContent = `AEROPRODUCE KENYA - OFFICIAL EXPORT DOCUMENT
+    const docContent = `SPEDIRE KENYA - OFFICIAL EXPORT DOCUMENT
 =====================================================
 Document Name: ${doc.name}
 Document Type: ${doc.type.toUpperCase()}
@@ -683,8 +686,9 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                       onChange={(e) => setNewDest(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                     >
-                      <optgroup label="Middle East & Gulf (Kuwait, UAE, Saudi, Qatar)">
+                      <optgroup label="Middle East & Gulf (Kuwait, Oman, UAE, Saudi, Qatar)">
                         <option value="KWI">Kuwait City, Kuwait (KWI)</option>
+                        <option value="MCT">Muscat, Oman (MCT)</option>
                         <option value="DXB">Dubai, UAE (DXB)</option>
                         <option value="DOH">Doha, Qatar (DOH)</option>
                         <option value="JED">Jeddah, Saudi Arabia (JED)</option>
@@ -715,37 +719,41 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                 {/* Commodity & Preferred Carrier */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Produce Commodity</label>
+                    <label className="block text-slate-300 font-semibold mb-1">Produce & Meat Commodity</label>
                     <select
                       value={newCommodity}
                       onChange={(e) => setNewCommodity(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                     >
-                      <option value="avocados">🥑 Fresh Avocados</option>
-                      <option value="soya_beans">🫘 Soya Beans & Legumes</option>
-                      <option value="chillies">🌶️ Fresh Chillies</option>
-                      <option value="herbs_veg">🌿 Fresh Herbs & Vegetables</option>
+                      <option value="passion_fruit">🟣 Fresh Passion Fruit</option>
+                      <option value="avocado">🥑 Fresh Avocados (Hass/Fuerte)</option>
+                      <option value="mangoes">🥭 Fresh Mangoes (Apple/Ngowe)</option>
+                      <option value="chillies">🌶️ Fresh Chillies (Bird’s Eye)</option>
+                      <option value="herbs">🌿 Fresh Herbs (Basil/Mint/Rosemary)</option>
+                      <option value="pineapple">🍍 Fresh Pineapples</option>
+                      <option value="meat_exports">🥩 Fresh Meat Exports (Chilled Halal Carcass)</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Preferred Carrier</label>
+                    <label className="block text-slate-300 font-semibold mb-1">Preferred Carrier (12 Airlines)</label>
                     <select
                       value={newCarrier}
                       onChange={(e) => setNewCarrier(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                     >
-                      <option value="KQ">Kenya Airways Cargo (KQ)</option>
-                      <option value="8V">Astral Aviation (8V)</option>
-                      <option value="KU">Kuwait Airways (KU)</option>
-                      <option value="KC">Air Astana Cargo (KC)</option>
-                      <option value="AZ">ITA Airways Cargo (AZ)</option>
-                      <option value="TK">Turkish Cargo (TK)</option>
-                      <option value="EK">Emirates SkyCargo (EK)</option>
-                      <option value="ET">Ethiopian Cargo (ET)</option>
                       <option value="QR">Qatar Airways Cargo (QR)</option>
+                      <option value="KQ">Kenya Airways Cargo (KQ)</option>
+                      <option value="EK">Emirates SkyCargo (EK)</option>
                       <option value="SV">Saudia Cargo (SV)</option>
-                      <option value="LH">Lufthansa Cargo (LH)</option>
+                      <option value="KL">KLM Cargo (KL)</option>
+                      <option value="AF">Air France Cargo (AF)</option>
+                      <option value="AI">Air India Cargo (AI)</option>
+                      <option value="ET">Ethiopian Cargo (ET)</option>
+                      <option value="SN">Brussels Airlines Cargo (SN)</option>
+                      <option value="SOL">Solit Air Cargo (SOL)</option>
+                      <option value="FX">FedEx Express (FX)</option>
+                      <option value="DH">DHL Aviation (DH)</option>
                     </select>
                   </div>
                 </div>

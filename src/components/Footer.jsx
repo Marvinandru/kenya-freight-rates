@@ -13,50 +13,54 @@ export const Footer = () => {
                 <Plane className="w-4 h-4 -rotate-45" />
               </div>
               <span className="font-extrabold text-white text-base">
-                AeroProduce <span className="text-emerald-400">Kenya</span>
+                Spedire <span className="text-emerald-400">Kenya</span>
               </span>
             </div>
             <p className="text-slate-400 leading-relaxed text-[11px]">
-              Kenya's dedicated fresh produce air cargo intelligence platform. Tracking daily freight rates (USD/kg) for Avocados, Soya Beans, Chillies, and Horticulture exports connecting Nairobi (JKIA) to global markets.
+              Kenya's premier fresh produce and meat air cargo booking & intelligence platform. Tracking daily freight rates (USD/kg) for Passion Fruit, Avocados, Mangoes, Chillies, Herbs, Pineapples, and Meat Exports connecting Nairobi (JKIA) to global destinations.
             </p>
           </div>
 
-          {/* Col 2: Key Produce Routes */}
+          {/* Col 2: Key Produce & Meat Routes */}
           <div>
-            <h5 className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">Fresh Produce Export Lanes</h5>
+            <h5 className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">Key Export Corridors</h5>
             <ul className="space-y-1.5 text-[11px]">
-              <li>NBO ➔ AMS (Amsterdam) - Avocados & Soya Beans</li>
-              <li>NBO ➔ LHR (London Heathrow) - Chillies & Beans</li>
-              <li>NBO ➔ DXB (Dubai) - Avocados & Hot Chillies</li>
-              <li>NBO ➔ FRA (Frankfurt) - French Beans & Legumes</li>
-              <li>NBO ➔ JED/RUH (Saudi Arabia) - Produce & Fruits</li>
+              <li>NBO ➔ KWI (Kuwait) - Solit Air Direct Fresh Cargo</li>
+              <li>NBO ➔ MCT (Muscat, Oman) - Fresh Produce & Meat</li>
+              <li>NBO ➔ DXB (Dubai) - Avocados & Chillies</li>
+              <li>NBO ➔ AMS (Amsterdam) - Passion Fruit & Herbs</li>
+              <li>NBO ➔ JED/RUH (Saudi) - Chilled Halal Meat & Produce</li>
             </ul>
           </div>
 
-          {/* Col 3: Monitored Airlines */}
+          {/* Col 3: Monitored 12 Airlines */}
           <div>
-            <h5 className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">Produce Reefer Carriers</h5>
+            <h5 className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">Supported 12 Airlines</h5>
             <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+              <span>• Qatar Airways Cargo</span>
               <span>• Kenya Airways Cargo</span>
-              <span>• Astral Aviation</span>
-              <span>• Ethiopian Cargo</span>
               <span>• Emirates SkyCargo</span>
-              <span>• Qatar Cargo</span>
               <span>• Saudia Cargo</span>
-              <span>• Lufthansa Cargo</span>
-              <span>• Turkish Cargo</span>
+              <span>• KLM Cargo</span>
+              <span>• Air France Cargo</span>
+              <span>• Air India Cargo</span>
+              <span>• Ethiopian Cargo</span>
+              <span>• Brussels Airlines</span>
+              <span>• Solit Air Cargo</span>
+              <span>• FedEx Express</span>
+              <span>• DHL Aviation</span>
             </div>
           </div>
 
-          {/* Col 4: Contact & KEPHIS info */}
+          {/* Col 4: Contact & Verification info */}
           <div>
-            <h5 className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">JKIA Produce Desk</h5>
+            <h5 className="font-bold text-white mb-3 uppercase tracking-wider text-[11px]">Spedire Cargo Desk</h5>
             <p className="text-[11px] text-slate-400 mb-2">
-              Rates updated daily. Pre-cooling certification & KEPHIS phytosanitary clearance required at cargo terminal intake.
+              Rates verified daily. Pre-cooling certification, KEPHIS inspection & veterinary clearance ready at JKIA cargo terminal.
             </p>
             <div className="text-[11px] space-y-1 text-slate-300">
               <div className="flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-emerald-400" /> produce@aerofreight.co.ke
+                <Mail className="w-3.5 h-3.5 text-emerald-400" /> cargo@spedire.co.ke
               </div>
               <div className="flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-emerald-400" /> +254 (0) 20 661 2000
@@ -68,11 +72,11 @@ export const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
           <div>
-            © {new Date().getFullYear()} AeroProduce Kenya. Exclusively tracking fresh produce air freight rates in USD per KG.
+            © {new Date().getFullYear()} Spedire Kenya. Fresh produce & meat air freight logistics and space booking platform.
           </div>
           <div className="flex items-center gap-4">
             <span className="text-emerald-400 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> KEPHIS & IATA Perishables Standards
+              <ShieldCheck className="w-3.5 h-3.5" /> KEPHIS, HCDA & IATA Perishables Standards
             </span>
           </div>
         </div>

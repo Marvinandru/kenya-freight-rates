@@ -11,7 +11,8 @@ import {
   FileText, 
   CheckCircle2,
   Sparkles,
-  Leaf
+  Leaf,
+  Lock
 } from 'lucide-react';
 
 export const AuthModal = () => {
@@ -27,6 +28,7 @@ export const AuthModal = () => {
   } = useRates();
 
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('+254 7');
@@ -43,13 +45,13 @@ export const AuthModal = () => {
         alert('Please enter your email address');
         return;
       }
-      login(email);
+      login(email, password);
     } else {
       if (!email.trim() || !companyName.trim()) {
         alert('Please fill in required fields (Company Name and Email)');
         return;
       }
-      signup({ name, companyName, email, phone, hcdLicense, kephisReg, location });
+      signup({ name, companyName, email, password, phone, hcdLicense, kephisReg, location });
     }
   };
 
@@ -191,11 +193,31 @@ export const AuthModal = () => {
             </div>
           </div>
 
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-slate-300 font-semibold">Password {authMode === 'signup' && '*'}</label>
+              {authMode === 'login' && (
+                <span className="text-[10px] text-slate-500">Any password or default demo</span>
+              )}
+            </div>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="password"
+                required={authMode === 'signup'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={authMode === 'signup' ? 'Create a secure password' : 'Enter password'}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/25 transition-all text-xs"
           >
-            {authMode === 'login' ? 'Sign In & Access Export Vault' : 'Register & Create Account'}
+            {authMode === 'login' ? 'Sign In & Access Spedire Portal' : 'Register & Create Spedire Account'}
           </button>
         </form>
 

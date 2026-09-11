@@ -11,6 +11,7 @@ import { AdminManager } from './components/AdminManager';
 import { AuthModal } from './components/AuthModal';
 import { RateHistoryModal } from './components/RateHistoryModal';
 import { OrderApprovalModal } from './components/OrderApprovalModal';
+import { BookSpaceModal } from './components/BookSpaceModal';
 import { Footer } from './components/Footer';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
@@ -61,6 +62,9 @@ const AppContent = () => {
 
       {/* Order Booking Approval & Advance Bank Payment Prompt Modal */}
       <OrderApprovalModal />
+
+      {/* Flight Space Booking & Order Placement Modal */}
+      <BookSpaceModal />
 
       {/* Footer */}
       <Footer />

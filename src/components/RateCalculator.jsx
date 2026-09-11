@@ -33,7 +33,8 @@ export const RateCalculator = () => {
     profitMarginPerKg,
     getSellingRate,
     getSellingRatePerMT,
-    markupPerMT,
+    openBookingModal,
+    calculateProduceCostBreakdown,
     selectedRouteForCalc,
     setSelectedRouteForCalc,
     createShipment,
@@ -42,8 +43,8 @@ export const RateCalculator = () => {
 
   // Calculator Form State
   const [origin, setOrigin] = useState(selectedRouteForCalc?.origin || 'NBO');
-  const [destination, setDestination] = useState(selectedRouteForCalc?.destination || 'AMS');
-  const [commodity, setCommodity] = useState(selectedRouteForCalc?.commodity || 'avocados');
+  const [destination, setDestination] = useState(selectedRouteForCalc?.destination || 'KWI');
+  const [commodity, setCommodity] = useState(selectedRouteForCalc?.commodity || 'avocado');
   const [grossWeight, setGrossWeight] = useState(1200);
   
   // Dimensions mode
@@ -56,24 +57,32 @@ export const RateCalculator = () => {
 
   const [copiedQuote, setCopiedQuote] = useState(false);
 
-  // Apply produce preset
+  // Apply produce & meat preset
   const applyProducePreset = (type) => {
-    if (type === 'avocados') {
-      setCommodity('avocados');
+    if (type === 'avocado') {
+      setCommodity('avocado');
       setGrossWeight(1800);
       setLength(120);
       setWidth(100);
       setHeight(160);
       setPieces(2);
       setDestination('AMS');
-    } else if (type === 'soya_beans') {
-      setCommodity('soya_beans');
-      setGrossWeight(1200);
+    } else if (type === 'passion_fruit') {
+      setCommodity('passion_fruit');
+      setGrossWeight(1000);
       setLength(120);
       setWidth(80);
-      setHeight(150);
+      setHeight(140);
       setPieces(2);
       setDestination('LHR');
+    } else if (type === 'mangoes') {
+      setCommodity('mangoes');
+      setGrossWeight(1200);
+      setLength(120);
+      setWidth(100);
+      setHeight(150);
+      setPieces(2);
+      setDestination('MCT'); // Muscat, Oman
     } else if (type === 'chillies') {
       setCommodity('chillies');
       setGrossWeight(600);
@@ -82,8 +91,32 @@ export const RateCalculator = () => {
       setHeight(140);
       setPieces(1);
       setDestination('DXB');
+    } else if (type === 'herbs') {
+      setCommodity('herbs');
+      setGrossWeight(500);
+      setLength(120);
+      setWidth(80);
+      setHeight(120);
+      setPieces(1);
+      setDestination('CDG');
+    } else if (type === 'pineapple') {
+      setCommodity('pineapple');
+      setGrossWeight(2000);
+      setLength(120);
+      setWidth(100);
+      setHeight(160);
+      setPieces(3);
+      setDestination('BRU');
+    } else if (type === 'meat_exports') {
+      setCommodity('meat_exports');
+      setGrossWeight(1500);
+      setLength(120);
+      setWidth(100);
+      setHeight(150);
+      setPieces(2);
+      setDestination('KWI'); // Kuwait City
     }
-    showNotification(`Applied ${type.replace('_', ' ').toUpperCase()} produce shipping preset!`);
+    showNotification(`Applied ${type.replace('_', ' ').toUpperCase()} cargo shipping preset!`);
   };
 
   useEffect(() => {
@@ -148,17 +181,22 @@ export const RateCalculator = () => {
         tierApplied = '+1000kg (1 MT)';
       }
 
-      // Ensure quoted rates include the 0.20 USD/KG markup (= $200.00 USD / Metric Ton)
+      // Quoted rate seamlessly includes the profit margin (never indicated to client)
       const quotedRatePerKg = Number((baseRatePerKg + profitMarginPerKg).toFixed(2));
       const quotedRatePerMT = Number((quotedRatePerKg * 1000).toFixed(2));
-      const markupPerMTApplied = Number((profitMarginPerKg * 1000).toFixed(2)); // $200.00 USD / MT
+      
+      // Calculate Produce Cost in 4 Categories:
+      // 1. KAA Handling Fees as 0.08$ * (price/Kg)
+      // 2. Board Fee - fixed 17$
+      // 3. Security SCC as 0.07$ * (price/Kg)
+      // 4. 16% VAT added to total
+      const feeBreakdown = calculateProduceCostBreakdown(quotedRatePerKg, chargeableWeight);
+
       const totalBaseFreight = Math.max(item.minCharge || 0, quotedRatePerKg * chargeableWeight);
-      const totalFuel = (item.fuelSurcharge || 0) * chargeableWeight;
-      const totalSecurity = (item.secSurcharge || 0) * chargeableWeight;
-      const totalHandling = (item.handlingFee || 0) * chargeableWeight;
-      const grandTotalUSD = totalBaseFreight + totalFuel + totalSecurity + totalHandling;
-      const effectiveAllInPerKg = grandTotalUSD / (chargeableWeight || 1);
-      const effectiveAllInPerMT = effectiveAllInPerKg * 1000;
+      const totalFuel = Number(((item.fuelSurcharge || 0.38) * chargeableWeight).toFixed(2));
+      const grandTotalUSD = Number((totalBaseFreight + totalFuel + feeBreakdown.total).toFixed(2));
+      const effectiveAllInPerKg = Number((grandTotalUSD / (chargeableWeight || 1)).toFixed(2));
+      const effectiveAllInPerMT = Number((effectiveAllInPerKg * 1000).toFixed(2));
 
       const spaceAvailableMT = getAvailableFlightSpaceMT(item);
 
@@ -171,18 +209,16 @@ export const RateCalculator = () => {
         baseRatePerKg,
         quotedRatePerKg,
         quotedRatePerMT,
-        markupPerMTApplied,
+        feeBreakdown,
         spaceAvailableMT,
         totalBaseFreight,
         totalFuel,
-        totalSecurity,
-        totalHandling,
         grandTotalUSD,
         effectiveAllInPerKg,
         effectiveAllInPerMT
       };
     }).sort((a, b) => a.grandTotalUSD - b.grandTotalUSD);
-  }, [rates, origin, destination, commodity, chargeableWeight, airlines, profitMarginPerKg]);
+  }, [rates, origin, destination, commodity, chargeableWeight, airlines, profitMarginPerKg, calculateProduceCostBreakdown]);
 
   const formatPrice = (usdVal) => {
     if (!usdVal && usdVal !== 0) return '-';
@@ -196,10 +232,10 @@ export const RateCalculator = () => {
     const dest = airports[destination]?.name || destination;
     const commObj = commodities.find(c => c.id === commodity);
     const weightInMT = (chargeableWeight / 1000).toFixed(2);
-    const text = `🥑 *KENYA FRESH PRODUCE AIR FREIGHT QUOTE* ✈️
+    const text = `✈️ *SPEDIRE | FRESH PRODUCE & MEAT AIR FREIGHT QUOTE* 🇰🇪
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📍 *Route:* ${origin} (JKIA Nairobi) ➔ ${destination} (${dest})
-🌱 *Produce Item:* ${commObj?.name} (${commObj?.tempRange})
+🌱 *Commodity:* ${commObj?.name} (${commObj?.tempRange})
 ⚖️ *Actual Gross Weight:* ${grossWeight} KG (${(grossWeight / 1000).toFixed(2)} MT)
 📐 *Dimensions/Volume:* ${volumeCbm} CBM (${volumetricWeight} Vol. KG)
 🎯 *Chargeable Weight:* ${chargeableWeight} KG (${weightInMT} MT)
@@ -207,12 +243,12 @@ export const RateCalculator = () => {
 ✈️ *Airline Carrier:* ${carrier.airlineName} (${carrier.airlineCode})
 💰 *Quoted Rate / MT:* $${carrier.quotedRatePerMT.toLocaleString()} / MT ($${carrier.quotedRatePerKg.toFixed(2)} / KG)
 📦 *Available Cargo Space:* ${carrier.spaceAvailableMT} MT Left on Flight (Verified)
-⛽ *FSC Fuel + SSC Security:* $${((carrier.fuelSurcharge || 0) + (carrier.secSurcharge || 0)).toFixed(2)} / KG
+⛽ *FSC Fuel + Local Terminal Fees Included*
 💵 *Total Landed Air Freight:* $${carrier.grandTotalUSD.toFixed(2)} USD (All-In: $${carrier.effectiveAllInPerMT.toFixed(2)} / MT • $${carrier.effectiveAllInPerKg.toFixed(2)} / KG)
 ⏱️ *Transit Duration:* ${carrier.transitTime} | ${carrier.frequency}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌿 *Pre-Cooling & KEPHIS Phytosanitary Clearance Ready*
-📅 *Rates Verified for Today via AeroProduce Kenya*`;
+🌿 *Pre-Cooling & KEPHIS / Veterinary Export Clearance Ready*
+📅 *Rates Verified for Today via Spedire*`;
 
     navigator.clipboard.writeText(text);
     setCopiedQuote(carrier.id);
@@ -226,35 +262,59 @@ export const RateCalculator = () => {
       <div className="mb-6">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
           <Calculator className="w-3.5 h-3.5" />
-          <span>IATA Volumetric Fresh Produce Cargo Estimator</span>
+          <span>IATA Volumetric Fresh Produce & Meat Cargo Estimator</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Fresh Produce Air Cargo Cost Calculator
+          Fresh Produce & Meat Air Cargo Cost Calculator
         </h2>
         <p className="text-sm text-slate-300 mt-1">
-          Estimate total landed air freight for Avocados, Soya Beans & Legumes, Chillies, Herbs, and compare all airline quotes instantly.
+          Estimate landed air freight for Passion Fruit, Avocados, Mangoes, Chillies, Herbs, Pineapples & Meat Exports, and compare all 12 airline quotes instantly.
         </p>
 
-        {/* Produce Quick Presets */}
+        {/* Produce & Meat Quick Presets */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-slate-400">Quick Presets:</span>
           <button
-            onClick={() => applyProducePreset('avocados')}
+            onClick={() => applyProducePreset('avocado')}
             className="px-3 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-300 rounded-lg text-xs font-medium transition-all"
           >
-            🥑 2x Pallet Avocados (1,800 KG)
+            🥑 Avocados (1,800 KG • AMS)
           </button>
           <button
-            onClick={() => applyProducePreset('soya_beans')}
-            className="px-3 py-1 bg-teal-950/80 hover:bg-teal-900 border border-teal-500/30 text-teal-300 rounded-lg text-xs font-medium transition-all"
+            onClick={() => applyProducePreset('passion_fruit')}
+            className="px-3 py-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-500/30 text-purple-300 rounded-lg text-xs font-medium transition-all"
           >
-            🫘 2x Skid Soya/French Beans (1,200 KG)
+            🟣 Passion Fruit (1,000 KG • LHR)
+          </button>
+          <button
+            onClick={() => applyProducePreset('mangoes')}
+            className="px-3 py-1 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/30 text-amber-300 rounded-lg text-xs font-medium transition-all"
+          >
+            🥭 Mangoes (1,200 KG • MCT Oman)
           </button>
           <button
             onClick={() => applyProducePreset('chillies')}
             className="px-3 py-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-medium transition-all"
           >
-            🌶️ 1x Skid Fresh Chillies (600 KG)
+            🌶️ Chillies (600 KG • DXB)
+          </button>
+          <button
+            onClick={() => applyProducePreset('meat_exports')}
+            className="px-3 py-1 bg-red-950/80 hover:bg-red-900 border border-red-500/30 text-red-300 rounded-lg text-xs font-medium transition-all"
+          >
+            🥩 Chilled Halal Meat (1,500 KG • KWI Kuwait)
+          </button>
+          <button
+            onClick={() => applyProducePreset('herbs')}
+            className="px-3 py-1 bg-teal-950/80 hover:bg-teal-900 border border-teal-500/30 text-teal-300 rounded-lg text-xs font-medium transition-all"
+          >
+            🌿 Herbs (500 KG • CDG)
+          </button>
+          <button
+            onClick={() => applyProducePreset('pineapple')}
+            className="px-3 py-1 bg-yellow-950/80 hover:bg-yellow-900 border border-yellow-500/30 text-yellow-300 rounded-lg text-xs font-medium transition-all"
+          >
+            🍍 Pineapples (2,000 KG • BRU)
           </button>
         </div>
       </div>
@@ -265,7 +325,7 @@ export const RateCalculator = () => {
           <div className="glass-panel p-6 rounded-2xl border border-slate-800 shadow-xl">
             <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
               <Box className="w-4 h-4 text-emerald-400" />
-              1. Produce Shipment Specifications
+              1. Shipment Specifications
             </h3>
 
             <div className="space-y-4 text-xs">
@@ -291,8 +351,9 @@ export const RateCalculator = () => {
                   onChange={(e) => setDestination(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-medium focus:border-emerald-500 focus:outline-none"
                 >
-                  <optgroup label="Middle East & Gulf (Kuwait, UAE, Qatar, Saudi)">
+                  <optgroup label="Middle East & Gulf (Kuwait, Oman, UAE, Qatar, Saudi Arabia)">
                     <option value="KWI">Kuwait City, Kuwait (KWI - Kuwait Intl)</option>
+                    <option value="MCT">Muscat, Oman (MCT - Muscat Intl)</option>
                     <option value="DXB">Dubai, UAE (DXB - International)</option>
                     <option value="DOH">Doha, Qatar (DOH - Hamad)</option>
                     <option value="JED">Jeddah, Saudi Arabia (JED - King Abdulaziz)</option>
@@ -573,27 +634,37 @@ export const RateCalculator = () => {
                       </div>
                     </div>
 
-                    {/* Breakdown */}
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] font-mono bg-slate-950/60 p-2.5 rounded-xl">
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Quoted Rate / MT:</span>
-                        <span className="text-emerald-300 font-bold">{formatPrice(carrier.quotedRatePerMT)}</span>
+                    {/* Produce Cost & Freight Breakdown */}
+                    <div className="mt-4 pt-3 border-t border-slate-800/80">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <Leaf className="w-3 h-3 text-emerald-400" />
+                        <span>Freight & Produce Cost Breakdown (4 Categories + FSC)</span>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Base Freight Total:</span>
-                        <span className="text-slate-200">{formatPrice(carrier.totalBaseFreight)}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Fuel (FSC):</span>
-                        <span className="text-slate-200">{formatPrice(carrier.totalFuel)}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">Security (SSC):</span>
-                        <span className="text-slate-200">{formatPrice(carrier.totalSecurity)}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block text-[10px]">KAA Handling:</span>
-                        <span className="text-slate-200">{formatPrice(carrier.totalHandling)}</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-[11px] font-mono bg-slate-950/60 p-2.5 rounded-xl">
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">Base Freight:</span>
+                          <span className="text-slate-200">{formatPrice(carrier.totalBaseFreight)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">Fuel (FSC):</span>
+                          <span className="text-slate-200">{formatPrice(carrier.totalFuel)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">1. KAA Handling:</span>
+                          <span className="text-slate-200">{formatPrice(carrier.feeBreakdown?.kaaHandling)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">2. Board Fee:</span>
+                          <span className="text-slate-200">{formatPrice(carrier.feeBreakdown?.boardFee)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">3. Security SCC:</span>
+                          <span className="text-slate-200">{formatPrice(carrier.feeBreakdown?.securityScc)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">4. 16% VAT:</span>
+                          <span className="text-amber-400 font-bold">{formatPrice(carrier.feeBreakdown?.vat16)}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -619,24 +690,23 @@ export const RateCalculator = () => {
 
                         <button
                           onClick={() => {
-                            createShipment({
+                            const commObj = commodities.find(c => c.id === commodity);
+                            openBookingModal({
+                              ...carrier,
                               origin,
                               destination,
                               commodity,
-                              commodityName: commodityConfig.name,
-                              airlineId: carrier.id,
-                              airlineName: carrier.airlineName,
-                              airlineCode: carrier.airlineCode,
+                              commodityName: commObj?.name || commodity,
                               grossWeight,
                               chargeableWeight,
                               baseRatePerKg: carrier.baseRatePerKg,
                               quotedRatePerKg: carrier.quotedRatePerKg,
                               grandTotalUSD: carrier.grandTotalUSD,
                               flightDate: '3 Days Ahead (Space Confirmed)'
-                            }, true);
+                            });
                           }}
-                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/30 transition-all active:scale-95"
-                          title="Place order and confirm booking with advance payment prompt"
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer"
+                          title="Verify space availability and book airline cargo space"
                         >
                           <Plane className="w-3.5 h-3.5" />
                           <span>Book Space / Place Order</span>

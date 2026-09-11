@@ -84,13 +84,13 @@ export const AdminManager = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                Produce Freight & Profit Admin Console
+                Spedire Produce & Freight Admin Console
                 <span className="text-[11px] font-mono font-normal bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
-                  Margin: +${profitMarginPerKg.toFixed(2)}/kg
+                  Admin Margin: +${profitMarginPerKg.toFixed(2)}/kg
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Manage airline rates, adjust profit margins, oversee client shipments, and publish daily updates.
+                Manage 12 airlines, oversee live hold capacity, configure profit margins (hidden from client view), and publish daily rates.
               </p>
             </div>
           </div>
@@ -287,10 +287,10 @@ export const AdminManager = () => {
               <form onSubmit={handleSaveMargin} className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4 text-xs">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-emerald-400" />
-                  Configure Service Profit Markup
+                  Configure Service Profit Markup (Admin Visual Only)
                 </h3>
                 <p className="text-slate-400 text-xs leading-relaxed">
-                  This dollar amount will be automatically added on top of every base airline freight rate across the website, rate table, cargo calculator, and client invoices.
+                  This dollar amount ($0.30 USD/kg default) is automatically baked into quoted rates across the website, rate table, cargo calculator, and client invoices. In accordance with your setup, this margin is <strong>never indicated or revealed to clients</strong> — it is strictly for your visual as an admin.
                 </p>
 
                 <div>

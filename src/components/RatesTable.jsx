@@ -39,6 +39,8 @@ export const RatesTable = () => {
     exchangeRate, 
     profitMarginPerKg,
     getSellingRate,
+    openBookingModal,
+    calculateProduceCostBreakdown,
     setSelectedRouteForCalc,
     setSelectedRouteForHistory,
     setActiveTab,
@@ -402,18 +404,18 @@ export const RatesTable = () => {
                           </div>
                         </td>
 
-                        {/* Available Flight Space Left */}
-                        <td className="py-3 px-3 text-center">
-                          <div className="inline-flex flex-col items-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
+                        {/* Available Flight Space Left - Clickable */}
+                        <td className="py-3 px-3 text-center" onClick={(e) => { e.stopPropagation(); openBookingModal(item); }}>
+                          <div className="inline-flex flex-col items-center group/space cursor-pointer hover:scale-105 transition-transform" title="Click to book verified aircraft hold space">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
                               spaceMT <= 8 
-                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
-                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 group-hover/space:bg-amber-500/25' 
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 group-hover/space:bg-emerald-500/20'
                             }`}>
                               📦 {spaceMT} MT Left
                             </span>
-                            <span className="text-[9px] text-slate-400 mt-0.5">
-                              {spaceMT <= 8 ? 'Filling Fast' : 'Verified Open'}
+                            <span className="text-[9px] text-emerald-400 font-semibold mt-0.5 group-hover/space:underline">
+                              Book Space ➔
                             </span>
                           </div>
                         </td>
@@ -446,20 +448,20 @@ export const RatesTable = () => {
                         <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
                             <button
-                              onClick={() => handleOpenCalculator(item)}
-                              className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold transition-all flex items-center gap-1"
-                              title="Calculate shipment"
+                              onClick={() => openBookingModal(item)}
+                              className="px-2.5 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                              title="Book space and place order"
                             >
-                              <Calculator className="w-3 h-3" />
-                              <span className="hidden xl:inline">Quote</span>
+                              <Plane className="w-3 h-3" />
+                              <span>Book Space</span>
                             </button>
 
                             <button
-                              onClick={() => setActiveTab('portal')}
-                              className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-emerald-300 rounded-lg transition-all"
-                              title="View BL / KEPHIS Documents Vault"
+                              onClick={() => handleOpenCalculator(item)}
+                              className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs transition-all"
+                              title="Open Calculator with this lane"
                             >
-                              <FolderLock className="w-3.5 h-3.5" />
+                              <Calculator className="w-3.5 h-3.5 text-emerald-400" />
                             </button>
 
                             <button
@@ -480,10 +482,10 @@ export const RatesTable = () => {
                               {/* Surcharges & Rate Composition Breakdown */}
                               <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
                                 <div className="font-bold text-slate-200 mb-2 flex items-center justify-between">
-                                  <span>Produce Rate Breakdown</span>
+                                  <span>Produce Rate & Terminal Breakdown</span>
                                   <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">Verified Spot Rate</span>
                                 </div>
-                                <div className="space-y-1.5 font-mono">
+                                <div className="space-y-1.5 font-mono text-[11px]">
                                   <div className="flex justify-between text-slate-400">
                                     <span>Base Rate (+1000kg):</span>
                                     <span className="text-white font-semibold">{formatPrice(quotedRate1000)}/kg • {formatPrice(quotedRate1000 * 1000)}/MT</span>
@@ -492,18 +494,36 @@ export const RatesTable = () => {
                                     <span>Fuel Surcharge (FSC):</span>
                                     <span className="text-sky-300">{formatPrice(item.fuelSurcharge)}/kg • {formatPrice(item.fuelSurcharge * 1000)}/MT</span>
                                   </div>
-                                  <div className="flex justify-between text-slate-400">
-                                    <span>Security Surcharge (SSC):</span>
-                                    <span className="text-sky-300">{formatPrice(item.secSurcharge)}/kg • {formatPrice(item.secSurcharge * 1000)}/MT</span>
+                                  <div className="pt-1.5 border-t border-slate-800/80 text-[10px] text-emerald-300/80 font-bold uppercase">
+                                    Produce Cost (4 Local Categories):
                                   </div>
-                                  <div className="flex justify-between text-slate-400">
-                                    <span>KAA / Handling:</span>
-                                    <span className="text-sky-300">{formatPrice(item.handlingFee)}/kg • {formatPrice(item.handlingFee * 1000)}/MT</span>
-                                  </div>
-                                  <div className="pt-2 border-t border-slate-800 flex justify-between font-bold text-emerald-400">
-                                    <span>Total Landed Rate:</span>
-                                    <span>{formatPrice(allInPerKg * 1000)} / MT ({formatPrice(allInPerKg)} / kg)</span>
-                                  </div>
+                                  {(() => {
+                                    const fee = calculateProduceCostBreakdown(quotedRate1000, 1000);
+                                    return (
+                                      <>
+                                        <div className="flex justify-between text-slate-400 pl-1">
+                                          <span>1. KAA Handling (0.08$ × price/kg):</span>
+                                          <span className="text-slate-200">{formatPrice(fee.kaaHandling)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-slate-400 pl-1">
+                                          <span>2. Board Fee (Fixed):</span>
+                                          <span className="text-slate-200">{formatPrice(fee.boardFee)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-slate-400 pl-1">
+                                          <span>3. Security SCC (0.07$ × price/kg):</span>
+                                          <span className="text-slate-200">{formatPrice(fee.securityScc)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-slate-400 pl-1">
+                                          <span>4. VAT (16% on Total Fees):</span>
+                                          <span className="text-sky-300">{formatPrice(fee.vat16)}</span>
+                                        </div>
+                                        <div className="pt-1.5 border-t border-slate-800 flex justify-between font-bold text-emerald-400">
+                                          <span>Total Landed (Freight + Local):</span>
+                                          <span>{formatPrice((quotedRate1000 + (item.fuelSurcharge || 0.38)) * 1000 + fee.total)} / MT</span>
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                               </div>
 
@@ -571,17 +591,24 @@ export const RatesTable = () => {
                                 </div>
                                 <div className="mt-3 flex gap-2">
                                   <button
-                                    onClick={() => handleOpenCalculator(item)}
-                                    className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs shadow-md transition-all text-center"
+                                    onClick={() => openBookingModal(item)}
+                                    className="flex-1 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-lg text-xs shadow-md transition-all text-center flex items-center justify-center gap-1 active:scale-95"
                                   >
-                                    Calculate Quote
+                                    <Plane className="w-3.5 h-3.5" />
+                                    <span>Book Space</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenCalculator(item)}
+                                    className="py-1.5 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg text-xs border border-slate-700 transition-all text-center"
+                                  >
+                                    Calculator
                                   </button>
                                   <button
                                     onClick={() => setActiveTab('portal')}
-                                    className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-medium rounded-lg text-xs border border-emerald-500/20 transition-all flex items-center gap-1"
+                                    className="py-1.5 px-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-medium rounded-lg text-xs border border-emerald-500/20 transition-all flex items-center gap-1"
                                   >
                                     <FolderLock className="w-3.5 h-3.5" />
-                                    <span>Uploads</span>
+                                    <span>Docs</span>
                                   </button>
                                 </div>
                               </div>

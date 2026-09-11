@@ -86,13 +86,13 @@ export const Navbar = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white bg-clip-text">
-                  Aero<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">Produce</span> Kenya
+                  Spe<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">dire</span>
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider font-mono">
                   USD/KG • USD/MT
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-normal">Daily Fresh Produce Air Freight & Export Documents</p>
+              <p className="text-[11px] text-slate-400 font-normal">Fresh Produce & Meat Air Freight Gateway</p>
             </div>
           </div>
 
@@ -187,7 +187,7 @@ export const Navbar = () => {
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition-all"
               >
                 <User className="w-3.5 h-3.5" />
-                <span>Create Account</span>
+                <span>Sign In / Register</span>
               </button>
             )}
 

@@ -5,15 +5,46 @@ import confetti from 'canvas-confetti';
 
 const RatesContext = createContext();
 
-const STORAGE_KEY = 'aero_produce_rates_v4';
-const SHIPMENTS_KEY = 'aero_produce_shipments_v1';
-const CLIENTS_KEY = 'aero_produce_clients_v1';
-const AUTH_KEY = 'aero_produce_auth_user_v1';
-const PROFIT_KEY = 'aero_produce_profit_margin_v1';
-const TODAY_KEY = 'aero_produce_today_key_v2';
-const LAST_UPDATED_KEY = 'aero_produce_last_updated_v4';
+const STORAGE_KEY = 'spedire_rates_v6';
+const SHIPMENTS_KEY = 'spedire_shipments_v2';
+const CLIENTS_KEY = 'spedire_clients_v2';
+const AUTH_KEY = 'spedire_auth_user_v2';
+const PROFIT_KEY = 'spedire_profit_margin_v2';
+const TODAY_KEY = 'spedire_today_key_v3';
+const LAST_UPDATED_KEY = 'spedire_last_updated_v6';
 
 const EXCHANGE_RATE_USD_KES = 129.50;
+
+// Calculate Produce Cost in 4 Categories:
+// 1. KAA Handling Fees as 0.08$ * (price/Kg)
+// 2. Board Fee - fixed 17$
+// 3. Security SCC as 0.07$ * (price/Kg)
+// 4. 16% VAT added to total
+export const calculateProduceCostBreakdown = (pricePerKg = 1.0, weightKg = 1000) => {
+  const price = Number(pricePerKg) || 1.0;
+  const weight = Number(weightKg) || 1;
+  // 1. KAA Handling Fees as 0.08$ * (price/Kg) * weight
+  const kaaHandling = Number((0.08 * price * weight).toFixed(2));
+  // 2. Board Fee - fixed 17$
+  const boardFee = 17.00;
+  // 3. Security SCC as 0.07$ * (price/Kg) * weight
+  const securityScc = Number((0.07 * price * weight).toFixed(2));
+  // Subtotal before VAT
+  const subtotal = Number((kaaHandling + boardFee + securityScc).toFixed(2));
+  // 4. 16% VAT added to total
+  const vat16 = Number((subtotal * 0.16).toFixed(2));
+  const total = Number((subtotal + vat16).toFixed(2));
+
+  return {
+    kaaHandling,
+    boardFee,
+    securityScc,
+    subtotal,
+    vat16,
+    total,
+    effectivePerKg: Number((total / weight).toFixed(3))
+  };
+};
 
 // Nairobi East Africa Time format: e.g. "4 Sept 2026, 12:45 EAT"
 export const formatProduceDate = (date = new Date()) => {
@@ -57,13 +88,13 @@ export const isDateToday = (timestampOrDate) => {
 };
 
 export const RatesProvider = ({ children }) => {
-  // Profit Margin per KG (Default $0.20 USD for business owner = $200.00 USD / Metric Ton)
+  // Profit Margin per KG (Default $0.30 USD for business owner = $300.00 USD / Metric Ton)
   const [profitMarginPerKg, setProfitMarginPerKg] = useState(() => {
     try {
       const saved = localStorage.getItem(PROFIT_KEY);
-      return saved !== null ? Number(saved) : 0.20;
+      return saved !== null ? Number(saved) : 0.30;
     } catch (e) {
-      return 0.20;
+      return 0.30;
     }
   });
 
@@ -141,6 +172,20 @@ export const RatesProvider = ({ children }) => {
   const [selectedRouteForHistory, setSelectedRouteForHistory] = useState(null);
   const [selectedShipmentForModal, setSelectedShipmentForModal] = useState(null);
   const [notification, setNotification] = useState(null);
+
+  // Flight Space Booking & Order Placement Modal State
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [selectedBookingRoute, setSelectedBookingRoute] = useState(null);
+
+  const openBookingModal = (routeOrCarrier) => {
+    setSelectedBookingRoute(routeOrCarrier);
+    setIsBookingModalOpen(true);
+  };
+
+  const closeBookingModal = () => {
+    setIsBookingModalOpen(false);
+    setSelectedBookingRoute(null);
+  };
 
   // Manual & automatic refresh to today's date & live rates
   const refreshToToday = (showToast = true) => {
@@ -259,59 +304,75 @@ export const RatesProvider = ({ children }) => {
 
   const markupPerMT = Number((profitMarginPerKg * 1000).toFixed(2)); // $200.00 USD / MT markup
 
-  // Auth Functions
-  const login = (email) => {
-    const found = clients.find(c => c.email.toLowerCase() === email.toLowerCase());
+  // Auth Functions with credentials & persistence
+  const login = (email, password = '') => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const found = clients.find(c => c.email.toLowerCase() === cleanEmail);
     if (found) {
+      if (found.password && password && found.password !== password) {
+        showNotification('Invalid password. Please try again.', 'error');
+        return false;
+      }
       setCurrentUser(found);
       setIsAuthModalOpen(false);
-      showNotification(`Welcome back, ${found.name} (${found.companyName})!`);
+      showNotification(`Welcome back, ${found.name} (${found.companyName})!`, 'success');
       return true;
     } else {
-      // Auto-create account if not found
+      // Auto-register new account for seamless user experience
       const newAcc = {
         id: `USR-${Date.now().toString().slice(-4)}`,
-        name: email.split('@')[0],
-        companyName: `${email.split('@')[0].toUpperCase()} Produce Exports`,
-        email: email,
+        name: cleanEmail.split('@')[0],
+        companyName: `${cleanEmail.split('@')[0].toUpperCase()} Exports Ltd`,
+        email: cleanEmail,
+        password: password || '123456',
         phone: '+254 700 000 000',
         hcdLicense: `HCDA-${Date.now().toString().slice(-4)}`,
         kephisReg: `KEPHIS-${Date.now().toString().slice(-4)}`,
-        accountType: 'Produce Exporter',
+        accountType: 'Produce & Meat Exporter',
         location: 'Nairobi / JKIA Hub',
         joinedDate: 'Today'
       };
       setClients(prev => [newAcc, ...prev]);
       setCurrentUser(newAcc);
       setIsAuthModalOpen(false);
-      showNotification(`Account created & logged in as ${newAcc.email}!`);
+      showNotification(`Account created & signed in as ${newAcc.email}!`, 'success');
       return true;
     }
   };
 
-  const signup = ({ name, companyName, email, phone, hcdLicense, kephisReg, location }) => {
+  const signup = ({ name, companyName, email, password, phone, hcdLicense, kephisReg, location }) => {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const existing = clients.find(c => c.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      setCurrentUser(existing);
+      setIsAuthModalOpen(false);
+      showNotification(`Welcome back to Spedire, ${existing.companyName}!`);
+      return existing;
+    }
     const newAcc = {
       id: `USR-${Date.now().toString().slice(-4)}`,
-      name: name || 'Produce Exporter',
-      companyName: companyName || 'Kenyan Fresh Farm Ltd',
-      email: email,
+      name: name || 'Produce & Meat Exporter',
+      companyName: companyName || 'Kenyan Fresh Produce Ltd',
+      email: cleanEmail,
+      password: password || '123456',
       phone: phone || '+254 700 000 000',
       hcdLicense: hcdLicense || 'HCDA-2026',
       kephisReg: kephisReg || 'KEPHIS-2026',
-      accountType: 'Verified Produce Exporter',
+      accountType: 'Verified Produce & Meat Exporter',
       location: location || 'Nairobi, Kenya',
       joinedDate: 'Today'
     };
     setClients(prev => [newAcc, ...prev]);
     setCurrentUser(newAcc);
     setIsAuthModalOpen(false);
-    showNotification(`Welcome to AeroProduce Kenya, ${newAcc.companyName}!`);
+    showNotification(`Welcome to Spedire, ${newAcc.companyName}!`);
+    return newAcc;
   };
 
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem(AUTH_KEY);
-    showNotification('Logged out of exporter portal.', 'info');
+    showNotification('Signed out of Spedire exporter portal.', 'info');
   };
 
   // Booking Approval & Advance Bank Payment Prompt State
@@ -467,7 +528,7 @@ export const RatesProvider = ({ children }) => {
               fileSize: '380 KB',
               uploadedAt: 'Processing',
               verified: false,
-              issuer: 'AeroProduce Cargo Desk',
+              issuer: 'Spedire Cargo Desk',
               icon: 'Plane'
             }
           ]
@@ -674,6 +735,13 @@ export const RatesProvider = ({ children }) => {
         uploadDocument,
         deleteDocument,
         updateShipmentStatus,
+        calculateProduceCostBreakdown,
+        isBookingModalOpen,
+        setIsBookingModalOpen,
+        selectedBookingRoute,
+        setSelectedBookingRoute,
+        openBookingModal,
+        closeBookingModal,
         approvalPromptShipment,
         isApprovalModalOpen,
         triggerApprovalNotice,
