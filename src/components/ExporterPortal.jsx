@@ -725,13 +725,14 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                       onChange={(e) => setNewCommodity(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                     >
-                      <option value="passion_fruit">🟣 Fresh Passion Fruit</option>
                       <option value="avocado">🥑 Fresh Avocados (Hass/Fuerte)</option>
-                      <option value="mangoes">🥭 Fresh Mangoes (Apple/Ngowe)</option>
-                      <option value="chillies">🌶️ Fresh Chillies (Bird’s Eye)</option>
+                      <option value="chillies">🌶️ Fresh Chillies (Bird’s Eye/Bullet)</option>
                       <option value="herbs">🌿 Fresh Herbs (Basil/Mint/Rosemary)</option>
+                      <option value="mangoes">🥭 Fresh Mangoes (Apple/Ngowe)</option>
+                      <option value="meat">🥩 Regular Meat (Chilled Halal Goat, Lamb & Beef)</option>
+                      <option value="seafood">🦞 Sea Food (Fresh Fish, Lobster, Crab — UAE Express)</option>
+                      <option value="passion">🟣 Fresh Passion Fruit</option>
                       <option value="pineapple">🍍 Fresh Pineapples</option>
-                      <option value="meat_exports">🥩 Fresh Meat Exports (Chilled Halal Carcass)</option>
                     </select>
                   </div>
 

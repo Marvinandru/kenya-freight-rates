@@ -36,28 +36,28 @@ export const HeroBanner = () => {
     .filter(r => r.commodity === 'avocado')
     .map(r => getSellingRate(r.rate1000kg))
     .filter(Boolean);
-  const minAvocadoRate = avocadoRates.length > 0 ? Math.min(...avocadoRates) : 1.70;
-
-  // Find lowest passion fruit quoted rate
-  const passionRates = rates
-    .filter(r => r.commodity === 'passion_fruit')
-    .map(r => getSellingRate(r.rate1000kg))
-    .filter(Boolean);
-  const minPassionRate = passionRates.length > 0 ? Math.min(...passionRates) : 1.75;
+  const minAvocadoRate = avocadoRates.length > 0 ? Math.min(...avocadoRates) : 1.38;
 
   // Find lowest chillies quoted rate
   const chilliRates = rates
     .filter(r => r.commodity === 'chillies')
     .map(r => getSellingRate(r.rate1000kg))
     .filter(Boolean);
-  const minChilliRate = chilliRates.length > 0 ? Math.min(...chilliRates) : 1.55;
+  const minChilliRate = chilliRates.length > 0 ? Math.min(...chilliRates) : 1.35;
 
-  // Find lowest meat exports quoted rate
+  // Find lowest regular meat quoted rate
   const meatRates = rates
-    .filter(r => r.commodity === 'meat_exports')
+    .filter(r => r.commodity === 'meat' || r.commodity === 'meat_regular' || r.commodity === 'meat_exports')
     .map(r => getSellingRate(r.rate1000kg))
     .filter(Boolean);
-  const minMeatRate = meatRates.length > 0 ? Math.min(...meatRates) : 1.85;
+  const minMeatRate = meatRates.length > 0 ? Math.min(...meatRates) : 1.38;
+
+  // Find lowest seafood quoted rate (Especially UAE)
+  const seafoodRates = rates
+    .filter(r => r.commodity === 'seafood')
+    .map(r => getSellingRate(r.rate1000kg))
+    .filter(Boolean);
+  const minSeafoodRate = seafoodRates.length > 0 ? Math.min(...seafoodRates) : 1.45;
 
   const formatPrice = (usdVal) => {
     if (currencyMode === 'KES') {
@@ -100,7 +100,7 @@ export const HeroBanner = () => {
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
               Fresh Produce & Meat Air Freight Rates <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400">
-                Passion Fruit, Avocados, Mangoes, Chillies, Herbs, Pineapples & Meat
+                Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food & Passion
               </span>
             </h1>
 
@@ -137,7 +137,7 @@ export const HeroBanner = () => {
             </div>
           </div>
 
-          {/* Key Produce & Meat KPI Cards */}
+          {/* Key Produce & Meat KPI Cards - Avocado, Chillies, Regular Meat, Sea Food (UAE) */}
           <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 w-full lg:w-auto min-w-[320px]">
             {/* KPI 1: Avocados */}
             <div className="glass-card p-4 rounded-2xl border border-emerald-500/20 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
@@ -154,22 +154,7 @@ export const HeroBanner = () => {
               <p className="text-[11px] text-emerald-400/90 mt-1 font-mono font-medium">{formatPrice(minAvocadoRate)}/kg • Bulk Rate</p>
             </div>
 
-            {/* KPI 2: Passion Fruit */}
-            <div className="glass-card p-4 rounded-2xl border border-purple-500/20 relative overflow-hidden group hover:border-purple-500/40 transition-all">
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                <span>🟣 Passion Fruit</span>
-                <span className="flex items-center text-purple-400 text-[10px] font-bold bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">
-                  Daily
-                </span>
-              </div>
-              <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
-                {formatPrice(minPassionRate * 1000)}
-                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
-              </div>
-              <p className="text-[11px] text-purple-400/90 mt-1 font-mono font-medium">{formatPrice(minPassionRate)}/kg • Premium</p>
-            </div>
-
-            {/* KPI 3: Fresh Chillies */}
+            {/* KPI 2: Fresh Chillies */}
             <div className="glass-card p-4 rounded-2xl border border-rose-500/20 relative overflow-hidden group hover:border-rose-500/40 transition-all">
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                 <span>🌶️ Fresh Chillies</span>
@@ -184,10 +169,10 @@ export const HeroBanner = () => {
               <p className="text-[11px] text-rose-400/90 mt-1 font-mono font-medium">{formatPrice(minChilliRate)}/kg • Bulk Rate</p>
             </div>
 
-            {/* KPI 4: Meat Exports */}
+            {/* KPI 3: Regular Meat */}
             <div className="glass-card p-4 rounded-2xl border border-amber-500/20 relative overflow-hidden group hover:border-amber-500/40 transition-all">
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                <span>🥩 Meat Exports</span>
+                <span>🥩 Regular Meat</span>
                 <span className="flex items-center text-amber-400 text-[10px] font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
                   Halal
                 </span>
@@ -197,6 +182,21 @@ export const HeroBanner = () => {
                 <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
               <p className="text-[11px] text-amber-400/90 mt-1 font-mono font-medium">{formatPrice(minMeatRate)}/kg • Chilled Carcass</p>
+            </div>
+
+            {/* KPI 4: Sea Food (UAE Express) */}
+            <div className="glass-card p-4 rounded-2xl border border-sky-500/20 relative overflow-hidden group hover:border-sky-500/40 transition-all">
+              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>🦞 Sea Food</span>
+                <span className="flex items-center text-sky-400 text-[10px] font-bold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
+                  UAE Express
+                </span>
+              </div>
+              <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
+                {formatPrice(minSeafoodRate * 1000)}
+                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
+              </div>
+              <p className="text-[11px] text-sky-400/90 mt-1 font-mono font-medium">{formatPrice(minSeafoodRate)}/kg • Fresh Catch</p>
             </div>
           </div>
         </div>

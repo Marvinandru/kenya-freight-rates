@@ -57,7 +57,7 @@ export const RateCalculator = () => {
 
   const [copiedQuote, setCopiedQuote] = useState(false);
 
-  // Apply produce & meat preset
+  // Apply produce & meat preset (Arranged as: Avocado, Chillies, Herbs, Mangoes, Regular Meat, Sea Food Especially UAE, Passion Fruit)
   const applyProducePreset = (type) => {
     if (type === 'avocado') {
       setCommodity('avocado');
@@ -67,22 +67,6 @@ export const RateCalculator = () => {
       setHeight(160);
       setPieces(2);
       setDestination('AMS');
-    } else if (type === 'passion_fruit') {
-      setCommodity('passion_fruit');
-      setGrossWeight(1000);
-      setLength(120);
-      setWidth(80);
-      setHeight(140);
-      setPieces(2);
-      setDestination('LHR');
-    } else if (type === 'mangoes') {
-      setCommodity('mangoes');
-      setGrossWeight(1200);
-      setLength(120);
-      setWidth(100);
-      setHeight(150);
-      setPieces(2);
-      setDestination('MCT'); // Muscat, Oman
     } else if (type === 'chillies') {
       setCommodity('chillies');
       setGrossWeight(600);
@@ -99,6 +83,38 @@ export const RateCalculator = () => {
       setHeight(120);
       setPieces(1);
       setDestination('CDG');
+    } else if (type === 'mangoes') {
+      setCommodity('mangoes');
+      setGrossWeight(1200);
+      setLength(120);
+      setWidth(100);
+      setHeight(150);
+      setPieces(2);
+      setDestination('MCT'); // Muscat, Oman
+    } else if (type === 'meat' || type === 'meat_exports' || type === 'meat_regular') {
+      setCommodity('meat');
+      setGrossWeight(1500);
+      setLength(120);
+      setWidth(100);
+      setHeight(150);
+      setPieces(2);
+      setDestination('KWI'); // Kuwait City
+    } else if (type === 'seafood') {
+      setCommodity('seafood');
+      setGrossWeight(1200);
+      setLength(120);
+      setWidth(100);
+      setHeight(140);
+      setPieces(2);
+      setDestination('DXB'); // Dubai, UAE Priority
+    } else if (type === 'passion' || type === 'passion_fruit') {
+      setCommodity('passion');
+      setGrossWeight(1000);
+      setLength(120);
+      setWidth(80);
+      setHeight(140);
+      setPieces(2);
+      setDestination('LHR');
     } else if (type === 'pineapple') {
       setCommodity('pineapple');
       setGrossWeight(2000);
@@ -107,14 +123,6 @@ export const RateCalculator = () => {
       setHeight(160);
       setPieces(3);
       setDestination('BRU');
-    } else if (type === 'meat_exports') {
-      setCommodity('meat_exports');
-      setGrossWeight(1500);
-      setLength(120);
-      setWidth(100);
-      setHeight(150);
-      setPieces(2);
-      setDestination('KWI'); // Kuwait City
     }
     showNotification(`Applied ${type.replace('_', ' ').toUpperCase()} cargo shipping preset!`);
   };
@@ -155,7 +163,12 @@ export const RateCalculator = () => {
     const matching = rates.filter(r => 
       r.origin === origin && 
       r.destination === destination && 
-      r.commodity === commodity
+      (r.commodity === commodity ||
+       (commodity === 'passion' && r.commodity === 'passion_fruit') ||
+       (commodity === 'passion_fruit' && r.commodity === 'passion') ||
+       (commodity === 'meat' && (r.commodity === 'meat_exports' || r.commodity === 'meat_regular')) ||
+       (commodity === 'meat_regular' && (r.commodity === 'meat' || r.commodity === 'meat_exports'))
+      )
     );
 
     return matching.map(item => {
@@ -220,6 +233,31 @@ export const RateCalculator = () => {
     }).sort((a, b) => a.grandTotalUSD - b.grandTotalUSD);
   }, [rates, origin, destination, commodity, chargeableWeight, airlines, profitMarginPerKg, calculateProduceCostBreakdown]);
 
+  // Selected best recommendation
+  const bestQuote = matchedCarriers[0];
+
+  const handleCopyBreakdown = () => {
+    if (!bestQuote) return;
+    const text = `SPEDIRE CARGO FREIGHT QUOTE:
+Route: ${origin} ➔ ${destination} (${airports[destination]?.city || destination})
+Commodity: ${commodities.find(c => c.id === commodity)?.name || commodity}
+Gross / Chargeable Weight: ${grossWeight} KG / ${chargeableWeight} KG
+Preferred Carrier: ${bestQuote.airlineName} (${bestQuote.airlineCode})
+Available Flight Space: ${bestQuote.spaceAvailableMT} MT Hold Space Left
+Quoted Rate (+1000kg MT): $${bestQuote.quotedRatePerMT.toLocaleString()}/MT ($${bestQuote.quotedRatePerKg.toFixed(2)}/kg)
+Base Airfreight: $${bestQuote.totalBaseFreight.toFixed(2)}
+Fuel Surcharge (FSC): $${bestQuote.totalFuel.toFixed(2)}
+Local Handling & Taxes: $${bestQuote.feeBreakdown.total.toFixed(2)} (KAA Handling: $${bestQuote.feeBreakdown.kaaHandling}, Board Fee: $${bestQuote.feeBreakdown.boardFee}, Security SCC: $${bestQuote.feeBreakdown.securityScc}, 16% VAT: $${bestQuote.feeBreakdown.vat16})
+ESTIMATED ALL-IN TOTAL: $${bestQuote.grandTotalUSD.toLocaleString()} ($${bestQuote.effectiveAllInPerKg}/kg)
+Payment: 100% Advance Payment via USD Bank Wire
+Notice: Bookings assured with 3 days advance confirmation`;
+
+    navigator.clipboard.writeText(text);
+    setCopiedQuote(true);
+    showNotification('Produce airfreight quotation copied to clipboard!');
+    setTimeout(() => setCopiedQuote(false), 2500);
+  };
+
   const formatPrice = (usdVal) => {
     if (!usdVal && usdVal !== 0) return '-';
     if (currencyMode === 'KES') {
@@ -258,20 +296,20 @@ export const RateCalculator = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Title */}
+      {/* Header */}
       <div className="mb-6">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
           <Calculator className="w-3.5 h-3.5" />
-          <span>IATA Volumetric Fresh Produce & Meat Cargo Estimator</span>
+          <span>Volumetric & All-In Landed Airfreight Calculator</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Fresh Produce & Meat Air Cargo Cost Calculator
+          Commercial Cargo Rate & Local Fee Estimator
         </h2>
         <p className="text-sm text-slate-300 mt-1">
-          Estimate landed air freight for Passion Fruit, Avocados, Mangoes, Chillies, Herbs, Pineapples & Meat Exports, and compare all 12 airline quotes instantly.
+          Estimate landed air freight for Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food (UAE Express) & Passion Fruit, and compare all 12 airline quotes instantly.
         </p>
 
-        {/* Produce & Meat Quick Presets */}
+        {/* Produce & Meat Quick Presets (Exact Order: Avocado -> Chillies -> Herbs -> Mangoes -> Regular Meat -> Sea Food -> Passion Fruit) */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-slate-400">Quick Presets:</span>
           <button
@@ -281,10 +319,16 @@ export const RateCalculator = () => {
             🥑 Avocados (1,800 KG • AMS)
           </button>
           <button
-            onClick={() => applyProducePreset('passion_fruit')}
-            className="px-3 py-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-500/30 text-purple-300 rounded-lg text-xs font-medium transition-all"
+            onClick={() => applyProducePreset('chillies')}
+            className="px-3 py-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-medium transition-all"
           >
-            🟣 Passion Fruit (1,000 KG • LHR)
+            🌶️ Chillies (600 KG • DXB)
+          </button>
+          <button
+            onClick={() => applyProducePreset('herbs')}
+            className="px-3 py-1 bg-teal-950/80 hover:bg-teal-900 border border-teal-500/30 text-teal-300 rounded-lg text-xs font-medium transition-all"
+          >
+            🌿 Herbs (500 KG • CDG)
           </button>
           <button
             onClick={() => applyProducePreset('mangoes')}
@@ -293,22 +337,22 @@ export const RateCalculator = () => {
             🥭 Mangoes (1,200 KG • MCT Oman)
           </button>
           <button
-            onClick={() => applyProducePreset('chillies')}
-            className="px-3 py-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-medium transition-all"
-          >
-            🌶️ Chillies (600 KG • DXB)
-          </button>
-          <button
-            onClick={() => applyProducePreset('meat_exports')}
+            onClick={() => applyProducePreset('meat')}
             className="px-3 py-1 bg-red-950/80 hover:bg-red-900 border border-red-500/30 text-red-300 rounded-lg text-xs font-medium transition-all"
           >
-            🥩 Chilled Halal Meat (1,500 KG • KWI Kuwait)
+            🥩 Regular Meat (1,500 KG • KWI Kuwait)
           </button>
           <button
-            onClick={() => applyProducePreset('herbs')}
-            className="px-3 py-1 bg-teal-950/80 hover:bg-teal-900 border border-teal-500/30 text-teal-300 rounded-lg text-xs font-medium transition-all"
+            onClick={() => applyProducePreset('seafood')}
+            className="px-3 py-1 bg-sky-950/80 hover:bg-sky-900 border border-sky-500/30 text-sky-300 rounded-lg text-xs font-medium transition-all"
           >
-            🌿 Herbs (500 KG • CDG)
+            🦞 Sea Food (1,200 KG • DXB Dubai — UAE Express)
+          </button>
+          <button
+            onClick={() => applyProducePreset('passion')}
+            className="px-3 py-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-500/30 text-purple-300 rounded-lg text-xs font-medium transition-all"
+          >
+            🟣 Passion Fruit (1,000 KG • LHR)
           </button>
           <button
             onClick={() => applyProducePreset('pineapple')}

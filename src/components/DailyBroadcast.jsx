@@ -26,7 +26,11 @@ export const DailyBroadcast = () => {
   const generateBroadcastText = () => {
     let filtered = rates;
     if (broadcastCategory !== 'all') {
-      filtered = rates.filter(r => r.commodity === broadcastCategory);
+      filtered = rates.filter(r => 
+        r.commodity === broadcastCategory ||
+        (broadcastCategory === 'passion' && r.commodity === 'passion_fruit') ||
+        (broadcastCategory === 'meat' && (r.commodity === 'meat_regular' || r.commodity === 'meat_exports'))
+      );
     }
 
     let text = `✈️ *SPEDIRE KENYA | DAILY FRESH PRODUCE & MEAT BULLETIN* 🇰🇪\n`;
@@ -62,7 +66,7 @@ export const DailyBroadcast = () => {
     });
 
     text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `🌿 *Cold Chain:* Target +4°C (Avocados/Pineapple) | +8°C (Chillies) | 0°C to +2°C (Meat)\n`;
+    text += `🌿 *Cold Chain:* Target +4°C (Avocados) | +8°C (Chillies) | 0°C to +2°C (Halal Meat & UAE Seafood Wet-Ice)\n`;
     text += `📑 *KEPHIS, HCDA & Veterinary Health:* Pre-clearance ready at JKIA\n`;
     text += `💵 *Payment Terms:* 100% Advance Payment via USD Bank Wire\n`;
     text += `⏱️ *Advance Booking:* Quotes assured 3 days in advance\n`;
@@ -97,7 +101,7 @@ export const DailyBroadcast = () => {
             Daily Produce & Meat Broadcast & Printable Rate Card
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">
-            Share daily avocado, passion fruit, mango, chillies, herbs, pineapple & meat export spot rates directly to exporter WhatsApp groups or print official rate cards.
+            Share daily avocado, chillies, herbs, mangoes, regular meat, UAE sea food & passion fruit export spot rates directly to exporter WhatsApp groups or print official rate cards.
           </p>
         </div>
 
@@ -137,14 +141,15 @@ export const DailyBroadcast = () => {
                   onChange={(e) => setBroadcastCategory(e.target.value)}
                   className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
                 >
-                  <option value="all">🌍 All 7 Export Commodities</option>
-                  <option value="passion_fruit">🟣 Fresh Passion Fruit</option>
+                  <option value="all">🌍 All Export Commodities</option>
                   <option value="avocado">🥑 Fresh Avocados</option>
-                  <option value="mangoes">🥭 Fresh Mangoes</option>
                   <option value="chillies">🌶️ Fresh Chillies</option>
                   <option value="herbs">🌿 Fresh Herbs</option>
+                  <option value="mangoes">🥭 Fresh Mangoes</option>
+                  <option value="meat">🥩 Regular Meat (Chilled Halal)</option>
+                  <option value="seafood">🦞 Sea Food (Fresh Fish & Lobster — UAE Express)</option>
+                  <option value="passion">🟣 Fresh Passion Fruit</option>
                   <option value="pineapple">🍍 Fresh Pineapples</option>
-                  <option value="meat_exports">🥩 Fresh Meat Exports</option>
                 </select>
 
                 <button

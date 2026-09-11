@@ -5,13 +5,13 @@ import confetti from 'canvas-confetti';
 
 const RatesContext = createContext();
 
-const STORAGE_KEY = 'spedire_rates_v6';
-const SHIPMENTS_KEY = 'spedire_shipments_v2';
+const STORAGE_KEY = 'spedire_rates_v7';
+const SHIPMENTS_KEY = 'spedire_shipments_v3';
 const CLIENTS_KEY = 'spedire_clients_v2';
 const AUTH_KEY = 'spedire_auth_user_v2';
 const PROFIT_KEY = 'spedire_profit_margin_v2';
 const TODAY_KEY = 'spedire_today_key_v3';
-const LAST_UPDATED_KEY = 'spedire_last_updated_v6';
+const LAST_UPDATED_KEY = 'spedire_last_updated_v7';
 
 const EXCHANGE_RATE_USD_KES = 129.50;
 

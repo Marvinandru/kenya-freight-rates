@@ -65,6 +65,22 @@ export const RatesTable = () => {
     return `$${Number(usdVal).toFixed(2)}`;
   };
 
+  // Commodity Priority Mapping:
+  // 1. Avocado, 2. Chillies, 3. Herbs, 4. Mangoes, 5. Meat (Regular Meat), 6. Sea Food (Especially UAE), 7. Passion Fruit (least moving)
+  const COMMODITY_PRIORITY = {
+    'avocado': 1,
+    'chillies': 2,
+    'herbs': 3,
+    'mangoes': 4,
+    'meat': 5,
+    'meat_regular': 5,
+    'meat_exports': 5,
+    'seafood': 6,
+    'passion': 7,
+    'passion_fruit': 7,
+    'pineapple': 8
+  };
+
   // Filtered & Sorted Rates
   const filteredRates = useMemo(() => {
     return rates.filter(item => {
@@ -74,7 +90,15 @@ export const RatesTable = () => {
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
+        const matchesCommoditySynonyms = 
+          (q.includes('seafood') || q.includes('sea food') || q.includes('fish') || q.includes('lobster') || q.includes('crab') || q.includes('snapper')) && item.commodity === 'seafood' ||
+          (q.includes('meat') || q.includes('carcass') || q.includes('halal') || q.includes('goat') || q.includes('lamb') || q.includes('beef')) && (item.commodity === 'meat' || item.commodity === 'meat_regular' || item.commodity === 'meat_exports') ||
+          (q.includes('passion') && (item.commodity === 'passion' || item.commodity === 'passion_fruit')) ||
+          (q.includes('avocado') && item.commodity === 'avocado') ||
+          ((q.includes('chilli') || q.includes('pepper')) && item.commodity === 'chillies');
+
         const matchesSearch = 
+          matchesCommoditySynonyms ||
           item.destination.toLowerCase().includes(q) ||
           airport.city.toLowerCase().includes(q) ||
           airport.country.toLowerCase().includes(q) ||
@@ -88,8 +112,14 @@ export const RatesTable = () => {
         return false;
       }
 
-      if (selectedCommodity !== 'all' && item.commodity !== selectedCommodity) {
-        return false;
+      if (selectedCommodity !== 'all') {
+        if (selectedCommodity === 'meat' || selectedCommodity === 'meat_regular') {
+          if (item.commodity !== 'meat' && item.commodity !== 'meat_regular' && item.commodity !== 'meat_exports') return false;
+        } else if (selectedCommodity === 'passion' || selectedCommodity === 'passion_fruit') {
+          if (item.commodity !== 'passion' && item.commodity !== 'passion_fruit') return false;
+        } else if (item.commodity !== selectedCommodity) {
+          return false;
+        }
       }
 
       if (selectedAirline !== 'all' && item.airlineId !== selectedAirline) {
@@ -98,17 +128,53 @@ export const RatesTable = () => {
 
       return true;
     }).sort((a, b) => {
-      let comparison = 0;
-      if (sortBy === 'rate') {
-        const rateA = getSellingRate(a[selectedWeightTier]);
-        const rateB = getSellingRate(b[selectedWeightTier]);
-        comparison = rateA - rateB;
-      } else if (sortBy === 'airline') {
-        comparison = a.airlineId.localeCompare(b.airlineId);
-      } else if (sortBy === 'destination') {
-        comparison = a.destination.localeCompare(b.destination);
+      const prioA = COMMODITY_PRIORITY[a.commodity] || 99;
+      const prioB = COMMODITY_PRIORITY[b.commodity] || 99;
+
+      // 1. If viewing all commodities, prioritize flights shipping items in order:
+      // avocado -> chillies -> herbs -> mangoes -> meat -> seafood -> passion.
+      // A flight shipping passion will strictly NOT be amongst the top quotes!
+      if (selectedCommodity === 'all') {
+        if (sortBy === 'rate') {
+          if (prioA !== prioB) {
+            return sortOrder === 'asc' ? prioA - prioB : prioB - prioA;
+          }
+          const rateA = getSellingRate(a[selectedWeightTier]);
+          const rateB = getSellingRate(b[selectedWeightTier]);
+          return rateA - rateB;
+        }
       }
-      return sortOrder === 'asc' ? comparison : -comparison;
+
+      // 2. On the airlines category / sorting by airline:
+      // Prioritize flights shipping items in this order (avocado -> chillies -> herbs -> mangoes -> meat -> seafood -> passion)
+      // so a flight shipping passion is never amongst the top for that airline.
+      if (sortBy === 'airline') {
+        const airlineComp = a.airlineId.localeCompare(b.airlineId);
+        if (airlineComp !== 0) {
+          return sortOrder === 'asc' ? airlineComp : -airlineComp;
+        }
+        if (prioA !== prioB) {
+          return prioA - prioB;
+        }
+        return getSellingRate(a[selectedWeightTier]) - getSellingRate(b[selectedWeightTier]);
+      }
+
+      if (sortBy === 'destination') {
+        const destComp = a.destination.localeCompare(b.destination);
+        if (destComp !== 0) {
+          return sortOrder === 'asc' ? destComp : -destComp;
+        }
+        if (prioA !== prioB) {
+          return prioA - prioB;
+        }
+        return getSellingRate(a[selectedWeightTier]) - getSellingRate(b[selectedWeightTier]);
+      }
+
+      // Standard rate sorting when a single commodity is selected
+      const rateA = getSellingRate(a[selectedWeightTier]);
+      const rateB = getSellingRate(b[selectedWeightTier]);
+      const rateComp = rateA - rateB;
+      return sortOrder === 'asc' ? rateComp : -rateComp;
     });
   }, [rates, searchQuery, selectedRegion, selectedCommodity, selectedAirline, selectedWeightTier, sortBy, sortOrder, airports, airlines, commodities, profitMarginPerKg]);
 
@@ -150,7 +216,7 @@ export const RatesTable = () => {
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Verified daily export spot rates and live aircraft hold capacity for Avocados, Soya Beans, Chillies, Herbs & Tropicals out of JKIA Nairobi.
+              Verified daily export spot rates and live aircraft hold capacity for Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food (UAE Express) & Tropicals out of JKIA Nairobi.
             </p>
           </div>
 
@@ -178,7 +244,7 @@ export const RatesTable = () => {
         {/* Commodity Selector Tabs */}
         <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
           <span className="text-xs font-semibold text-slate-400 whitespace-nowrap flex items-center gap-1 mr-1">
-            <Leaf className="w-3.5 h-3.5 text-emerald-400" /> Produce:
+            <Leaf className="w-3.5 h-3.5 text-emerald-400" /> Produce & Meat:
           </span>
           <button
             onClick={() => setSelectedCommodity('all')}
@@ -188,7 +254,7 @@ export const RatesTable = () => {
                 : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
             }`}
           >
-            All Produce Items
+            All Export Items
           </button>
           {commodities.map(c => (
             <button
@@ -202,6 +268,11 @@ export const RatesTable = () => {
             >
               <span>{c.icon}</span>
               <span>{c.name.split(' (')[0]}</span>
+              {c.id === 'seafood' && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/30 text-sky-200 border border-sky-400/40 uppercase font-bold tracking-tight ml-0.5">
+                  UAE Express
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -372,9 +443,20 @@ export const RatesTable = () => {
 
                         {/* Commodity */}
                         <td className="py-3 px-3">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-[11px]">
-                            <span>{comm.icon}</span>
-                            <span className="font-medium">{comm.name.split(' (')[0]}</span>
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] ${
+                            item.commodity === 'seafood'
+                              ? 'bg-sky-950/60 border-sky-500/40 text-sky-300 font-semibold'
+                              : item.commodity === 'meat' || item.commodity === 'meat_regular' || item.commodity === 'meat_exports'
+                              ? 'bg-amber-950/40 border-amber-500/30 text-amber-300 font-medium'
+                              : 'bg-emerald-950/40 border-emerald-500/20 text-emerald-300 font-medium'
+                          }`}>
+                            <span>{comm.icon || '📦'}</span>
+                            <span>{comm.name ? comm.name.split(' (')[0] : item.commodity}</span>
+                            {item.commodity === 'seafood' && (
+                              <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/30 text-sky-200 border border-sky-400/40 uppercase font-bold tracking-tight">
+                                UAE
+                              </span>
+                            )}
                           </div>
                         </td>
 
