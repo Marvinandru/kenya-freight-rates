@@ -31,6 +31,13 @@ export const HeroBanner = () => {
     profitMarginPerKg
   } = useRates();
 
+  // Find lowest flower quoted rate
+  const flowerRates = rates
+    .filter(r => r.commodity === 'flowers')
+    .map(r => getSellingRate(r.rate1000kg))
+    .filter(Boolean);
+  const minFlowerRate = flowerRates.length > 0 ? Math.min(...flowerRates) : 1.42;
+
   // Find lowest avocado quoted rate
   const avocadoRates = rates
     .filter(r => r.commodity === 'avocado')
@@ -98,14 +105,14 @@ export const HeroBanner = () => {
             </div>
             
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-              Fresh Produce & Meat Air Freight Rates <br />
+              Fresh Produce, Flowers & Meat Air Freight Rates <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400">
-                Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food & Passion
+                Flowers, Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food & Passion
               </span>
             </h1>
 
             <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-              Compare verified daily air cargo spot rates from <strong className="text-white font-medium">Nairobi (JKIA - NBO)</strong> across 12 airlines to Kuwait, Oman, UAE, Saudi Arabia, Europe & Asia. Real-time temperature-controlled hold space and instant booking.
+              Compare verified daily air cargo spot rates from <strong className="text-white font-medium">Nairobi (JKIA - NBO)</strong> across 12 airlines for fresh cut flowers, avocados, chillies, herbs, mangoes, regular meat, sea food & passion to Europe, GCC, Asia & Congo Brazzaville (BZV). Real-time temperature-controlled hold space and instant booking.
             </p>
 
             {/* Quick Action Badges */}
@@ -137,9 +144,24 @@ export const HeroBanner = () => {
             </div>
           </div>
 
-          {/* Key Produce & Meat KPI Cards - Avocado, Chillies, Regular Meat, Sea Food (UAE) */}
+          {/* Key Produce & Meat KPI Cards - Cut Flowers, Avocado, Chillies, Halal Meat & UAE Seafood */}
           <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 w-full lg:w-auto min-w-[320px]">
-            {/* KPI 1: Avocados */}
+            {/* KPI 1: Fresh Cut Flowers */}
+            <div className="glass-card p-4 rounded-2xl border border-rose-500/20 relative overflow-hidden group hover:border-rose-500/40 transition-all">
+              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>🌹 Cut Flowers</span>
+                <span className="flex items-center text-rose-400 text-[10px] font-bold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                  <TrendingDown className="w-3 h-3 mr-0.5" /> Quoted
+                </span>
+              </div>
+              <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
+                {formatPrice(minFlowerRate * 1000)}
+                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
+              </div>
+              <p className="text-[11px] text-rose-400/90 mt-1 font-mono font-medium">{formatPrice(minFlowerRate)}/kg • Cold Chain</p>
+            </div>
+
+            {/* KPI 2: Avocados */}
             <div className="glass-card p-4 rounded-2xl border border-emerald-500/20 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                 <span>🥑 Fresh Avocados</span>
@@ -154,11 +176,11 @@ export const HeroBanner = () => {
               <p className="text-[11px] text-emerald-400/90 mt-1 font-mono font-medium">{formatPrice(minAvocadoRate)}/kg • Bulk Rate</p>
             </div>
 
-            {/* KPI 2: Fresh Chillies */}
-            <div className="glass-card p-4 rounded-2xl border border-rose-500/20 relative overflow-hidden group hover:border-rose-500/40 transition-all">
+            {/* KPI 3: Fresh Chillies */}
+            <div className="glass-card p-4 rounded-2xl border border-teal-500/20 relative overflow-hidden group hover:border-teal-500/40 transition-all">
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
                 <span>🌶️ Fresh Chillies</span>
-                <span className="flex items-center text-rose-400 text-[10px] font-bold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                <span className="flex items-center text-teal-400 text-[10px] font-bold bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
                   Spot
                 </span>
               </div>
@@ -166,37 +188,22 @@ export const HeroBanner = () => {
                 {formatPrice(minChilliRate * 1000)}
                 <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-rose-400/90 mt-1 font-mono font-medium">{formatPrice(minChilliRate)}/kg • Bulk Rate</p>
+              <p className="text-[11px] text-teal-400/90 mt-1 font-mono font-medium">{formatPrice(minChilliRate)}/kg • Bulk Rate</p>
             </div>
 
-            {/* KPI 3: Regular Meat */}
+            {/* KPI 4: Regular Meat & Sea Food */}
             <div className="glass-card p-4 rounded-2xl border border-amber-500/20 relative overflow-hidden group hover:border-amber-500/40 transition-all">
               <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                <span>🥩 Regular Meat</span>
+                <span>🥩 Meat & Seafood</span>
                 <span className="flex items-center text-amber-400 text-[10px] font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                  Halal
+                  Halal / Express
                 </span>
               </div>
               <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
                 {formatPrice(minMeatRate * 1000)}
                 <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
               </div>
-              <p className="text-[11px] text-amber-400/90 mt-1 font-mono font-medium">{formatPrice(minMeatRate)}/kg • Chilled Carcass</p>
-            </div>
-
-            {/* KPI 4: Sea Food (UAE Express) */}
-            <div className="glass-card p-4 rounded-2xl border border-sky-500/20 relative overflow-hidden group hover:border-sky-500/40 transition-all">
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                <span>🦞 Sea Food</span>
-                <span className="flex items-center text-sky-400 text-[10px] font-bold bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">
-                  UAE Express
-                </span>
-              </div>
-              <div className="text-xl sm:text-2xl font-mono font-extrabold text-white">
-                {formatPrice(minSeafoodRate * 1000)}
-                <span className="text-xs font-normal text-slate-400 font-sans ml-1">/ MT</span>
-              </div>
-              <p className="text-[11px] text-sky-400/90 mt-1 font-mono font-medium">{formatPrice(minSeafoodRate)}/kg • Fresh Catch</p>
+              <p className="text-[11px] text-amber-400/90 mt-1 font-mono font-medium">{formatPrice(minMeatRate)}/kg • Chilled Hold</p>
             </div>
           </div>
         </div>

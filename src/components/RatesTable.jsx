@@ -22,7 +22,8 @@ import {
   ShieldCheck,
   FolderLock,
   RefreshCw,
-  Calendar
+  Calendar,
+  Layers
 } from 'lucide-react';
 import { DESTINATION_REGIONS, getAvailableFlightSpaceMT } from '../data/initialRates';
 
@@ -50,6 +51,7 @@ export const RatesTable = () => {
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('all');
+  const [selectedDestination, setSelectedDestination] = useState('all');
   const [selectedCommodity, setSelectedCommodity] = useState('all');
   const [selectedAirline, setSelectedAirline] = useState('all');
   const [selectedWeightTier, setSelectedWeightTier] = useState('rate1000kg');
@@ -65,20 +67,37 @@ export const RatesTable = () => {
     return `$${Number(usdVal).toFixed(2)}`;
   };
 
+  // Clean, dedicated display labels for each category
+  const COMMODITY_LABELS = {
+    'flowers': 'Flowers',
+    'avocado': 'Avocados',
+    'chillies': 'Chillies',
+    'herbs': 'Herbs',
+    'mangoes': 'Mangoes',
+    'meat': 'Regular Meat',
+    'meat_regular': 'Regular Meat',
+    'meat_exports': 'Regular Meat',
+    'seafood': 'Sea Food',
+    'passion': 'Passion Fruit',
+    'passion_fruit': 'Passion Fruit',
+    'pineapple': 'Pineapples'
+  };
+
   // Commodity Priority Mapping:
-  // 1. Avocado, 2. Chillies, 3. Herbs, 4. Mangoes, 5. Meat (Regular Meat), 6. Sea Food (Especially UAE), 7. Passion Fruit (least moving)
+  // 1. Fresh Cut Flowers, 2. Avocado, 3. Chillies, 4. Herbs, 5. Mangoes, 6. Meat (Regular Meat), 7. Sea Food (Especially UAE), 8. Passion Fruit
   const COMMODITY_PRIORITY = {
-    'avocado': 1,
-    'chillies': 2,
-    'herbs': 3,
-    'mangoes': 4,
-    'meat': 5,
-    'meat_regular': 5,
-    'meat_exports': 5,
-    'seafood': 6,
-    'passion': 7,
-    'passion_fruit': 7,
-    'pineapple': 8
+    'flowers': 1,
+    'avocado': 2,
+    'chillies': 3,
+    'herbs': 4,
+    'mangoes': 5,
+    'meat': 6,
+    'meat_regular': 6,
+    'meat_exports': 6,
+    'seafood': 7,
+    'passion': 8,
+    'passion_fruit': 8,
+    'pineapple': 9
   };
 
   // Filtered & Sorted Rates
@@ -91,8 +110,9 @@ export const RatesTable = () => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesCommoditySynonyms = 
-          (q.includes('seafood') || q.includes('sea food') || q.includes('fish') || q.includes('lobster') || q.includes('crab') || q.includes('snapper')) && item.commodity === 'seafood' ||
-          (q.includes('meat') || q.includes('carcass') || q.includes('halal') || q.includes('goat') || q.includes('lamb') || q.includes('beef')) && (item.commodity === 'meat' || item.commodity === 'meat_regular' || item.commodity === 'meat_exports') ||
+          ((q.includes('flower') || q.includes('rose') || q.includes('carnation') || q.includes('flora')) && item.commodity === 'flowers') ||
+          ((q.includes('seafood') || q.includes('sea food') || q.includes('fish') || q.includes('lobster') || q.includes('crab') || q.includes('snapper')) && item.commodity === 'seafood') ||
+          ((q.includes('meat') || q.includes('carcass') || q.includes('halal') || q.includes('goat') || q.includes('lamb') || q.includes('beef')) && (item.commodity === 'meat' || item.commodity === 'meat_regular' || item.commodity === 'meat_exports')) ||
           (q.includes('passion') && (item.commodity === 'passion' || item.commodity === 'passion_fruit')) ||
           (q.includes('avocado') && item.commodity === 'avocado') ||
           ((q.includes('chilli') || q.includes('pepper')) && item.commodity === 'chillies');
@@ -109,6 +129,10 @@ export const RatesTable = () => {
       }
 
       if (selectedRegion !== 'all' && airport.region !== selectedRegion) {
+        return false;
+      }
+
+      if (selectedDestination !== 'all' && item.destination !== selectedDestination) {
         return false;
       }
 
@@ -132,8 +156,7 @@ export const RatesTable = () => {
       const prioB = COMMODITY_PRIORITY[b.commodity] || 99;
 
       // 1. If viewing all commodities, prioritize flights shipping items in order:
-      // avocado -> chillies -> herbs -> mangoes -> meat -> seafood -> passion.
-      // A flight shipping passion will strictly NOT be amongst the top quotes!
+      // flowers -> avocado -> chillies -> herbs -> mangoes -> meat -> seafood -> passion.
       if (selectedCommodity === 'all') {
         if (sortBy === 'rate') {
           if (prioA !== prioB) {
@@ -176,7 +199,7 @@ export const RatesTable = () => {
       const rateComp = rateA - rateB;
       return sortOrder === 'asc' ? rateComp : -rateComp;
     });
-  }, [rates, searchQuery, selectedRegion, selectedCommodity, selectedAirline, selectedWeightTier, sortBy, sortOrder, airports, airlines, commodities, profitMarginPerKg]);
+  }, [rates, searchQuery, selectedRegion, selectedDestination, selectedCommodity, selectedAirline, selectedWeightTier, sortBy, sortOrder, airports, airlines, commodities, profitMarginPerKg]);
 
   const toggleRowExpand = (id) => {
     setExpandedRowId(expandedRowId === id ? null : id);
@@ -196,7 +219,7 @@ export const RatesTable = () => {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-emerald-400" />
-                Fresh Produce Air Freight Rates Matrix
+                Fresh Produce, Flowers & Meat Air Freight Rates Matrix
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono shadow-sm flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-emerald-400" />
@@ -216,7 +239,7 @@ export const RatesTable = () => {
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Verified daily export spot rates and live aircraft hold capacity for Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food (UAE Express) & Tropicals out of JKIA Nairobi.
+              Verified daily export spot rates and live aircraft hold capacity for Fresh Cut Flowers (Roses, Carnations), Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food & Passion to worldwide hubs & Congo Brazzaville (BZV).
             </p>
           </div>
 
@@ -225,7 +248,7 @@ export const RatesTable = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search destination, avocado, chilli, airline..."
+              placeholder="Search flowers, roses, Brazzaville, BZV, AMS, airline..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-sans"
@@ -243,8 +266,8 @@ export const RatesTable = () => {
 
         {/* Commodity Selector Tabs */}
         <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-          <span className="text-xs font-semibold text-slate-400 whitespace-nowrap flex items-center gap-1 mr-1">
-            <Leaf className="w-3.5 h-3.5 text-emerald-400" /> Produce & Meat:
+          <span className="text-xs font-semibold text-slate-300 whitespace-nowrap flex items-center gap-1.5 mr-1">
+            <Layers className="w-3.5 h-3.5 text-emerald-400" /> Export Categories:
           </span>
           <button
             onClick={() => setSelectedCommodity('all')}
@@ -256,29 +279,43 @@ export const RatesTable = () => {
           >
             All Export Items
           </button>
-          {commodities.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setSelectedCommodity(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                selectedCommodity === c.id
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
-                  : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
-              }`}
-            >
-              <span>{c.icon}</span>
-              <span>{c.name.split(' (')[0]}</span>
-              {c.id === 'seafood' && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/30 text-sky-200 border border-sky-400/40 uppercase font-bold tracking-tight ml-0.5">
-                  UAE Express
-                </span>
-              )}
-            </button>
-          ))}
+          {commodities.map(c => {
+            const isFlowers = c.id === 'flowers';
+            const isSelected = selectedCommodity === c.id;
+            const label = COMMODITY_LABELS[c.id] || c.name.split(' (')[0];
+            return (
+              <button
+                key={c.id}
+                onClick={() => setSelectedCommodity(c.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  isSelected
+                    ? isFlowers 
+                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold ring-1 ring-rose-400' 
+                      : 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
+                    : isFlowers
+                      ? 'bg-rose-950/50 text-rose-300 hover:bg-rose-900/50 border border-rose-500/40 font-semibold'
+                      : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                }`}
+              >
+                <span>{c.icon}</span>
+                <span>{label}</span>
+                {isFlowers && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">
+                    Roses
+                  </span>
+                )}
+                {c.id === 'seafood' && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/30 text-sky-200 border border-sky-400/40 uppercase font-bold tracking-tight ml-0.5">
+                    UAE Express
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Secondary Filters */}
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Destination Region */}
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 mb-1">Destination Region</label>
@@ -290,6 +327,46 @@ export const RatesTable = () => {
               {DESTINATION_REGIONS.map(reg => (
                 <option key={reg.id} value={reg.id}>{reg.name}</option>
               ))}
+            </select>
+          </div>
+
+          {/* Destination Airport Hub */}
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-400 mb-1">Destination Airport</label>
+            <select
+              value={selectedDestination}
+              onChange={(e) => setSelectedDestination(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none"
+            >
+              <option value="all">All Destination Hubs (20 Airports)</option>
+              <optgroup label="Congo & Intra-Africa">
+                <option value="BZV">BZV - Brazzaville, Congo (Maya-Maya)</option>
+                <option value="JNB">JNB - Johannesburg, South Africa</option>
+                <option value="EBB">EBB - Entebbe, Uganda</option>
+              </optgroup>
+              <optgroup label="Europe (Flower Auction & Fresh Gateways)">
+                <option value="AMS">AMS - Amsterdam Schiphol (FloraHolland)</option>
+                <option value="LHR">LHR - London Heathrow, UK</option>
+                <option value="CDG">CDG - Paris Charles de Gaulle</option>
+                <option value="BRU">BRU - Brussels National</option>
+                <option value="FRA">FRA - Frankfurt Main</option>
+                <option value="MXP">MXP - Milan Malpensa</option>
+                <option value="FCO">FCO - Rome Fiumicino</option>
+              </optgroup>
+              <optgroup label="Middle East & Gulf (GCC Hubs)">
+                <option value="KWI">KWI - Kuwait International</option>
+                <option value="DXB">DXB - Dubai International</option>
+                <option value="SHJ">SHJ - Sharjah International</option>
+                <option value="MCT">MCT - Muscat International</option>
+                <option value="DOH">DOH - Hamad International (Doha)</option>
+                <option value="RUH">RUH - King Khalid Intl (Riyadh)</option>
+                <option value="JED">JED - King Abdulaziz Intl (Jeddah)</option>
+              </optgroup>
+              <optgroup label="Asia & Americas">
+                <option value="BOM">BOM - Mumbai, India</option>
+                <option value="CAN">CAN - Guangzhou Baiyun, China</option>
+                <option value="JFK">JFK - New York JFK, USA</option>
+              </optgroup>
             </select>
           </div>
 
@@ -346,6 +423,87 @@ export const RatesTable = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Quick Route & Corridor Chips */}
+        <div className="mt-3 pt-3 border-t border-slate-800/60 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-[11px] font-semibold text-slate-400 mr-1 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-emerald-400" /> Quick Hubs:
+          </span>
+          <button
+            onClick={() => { setSelectedCommodity('flowers'); setSelectedDestination('all'); setSelectedRegion('all'); }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+              selectedCommodity === 'flowers' && selectedDestination === 'all'
+                ? 'bg-rose-600 text-white font-semibold shadow-sm'
+                : 'bg-slate-900 text-rose-300 hover:bg-slate-800 border border-rose-500/30'
+            }`}
+          >
+            <span>🌹 All Flower Routes</span>
+          </button>
+          <button
+            onClick={() => { setSelectedDestination('BZV'); setSelectedRegion('all'); }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+              selectedDestination === 'BZV' && selectedCommodity === 'all'
+                ? 'bg-emerald-500 text-white font-semibold'
+                : 'bg-slate-900 text-slate-200 hover:bg-slate-800 border border-slate-700'
+            }`}
+          >
+            <span>🇨🇬 Congo Brazzaville (BZV)</span>
+          </button>
+          <button
+            onClick={() => { setSelectedCommodity('flowers'); setSelectedDestination('BZV'); setSelectedRegion('all'); }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+              selectedCommodity === 'flowers' && selectedDestination === 'BZV'
+                ? 'bg-rose-600 text-white font-semibold'
+                : 'bg-slate-900 text-rose-300 hover:bg-slate-800 border border-slate-700'
+            }`}
+          >
+            <span>🌹 Flowers ➔ Congo (BZV)</span>
+          </button>
+          <button
+            onClick={() => { setSelectedCommodity('flowers'); setSelectedDestination('AMS'); setSelectedRegion('all'); }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+              selectedCommodity === 'flowers' && selectedDestination === 'AMS'
+                ? 'bg-rose-600 text-white font-semibold'
+                : 'bg-slate-900 text-rose-300 hover:bg-slate-800 border border-slate-700'
+            }`}
+          >
+            <span>🌹 Flowers ➔ Amsterdam (AMS)</span>
+          </button>
+          <button
+            onClick={() => { setSelectedCommodity('meat'); setSelectedDestination('KWI'); setSelectedRegion('all'); }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+              selectedCommodity === 'meat' && selectedDestination === 'KWI'
+                ? 'bg-amber-500 text-white font-semibold'
+                : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+            }`}
+          >
+            <span>🥩 Meat ➔ Kuwait (KWI)</span>
+          </button>
+          <button
+            onClick={() => { setSelectedCommodity('seafood'); setSelectedDestination('DXB'); setSelectedRegion('all'); }}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+              selectedCommodity === 'seafood' && selectedDestination === 'DXB'
+                ? 'bg-sky-500 text-white font-semibold'
+                : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+            }`}
+          >
+            <span>🦞 Sea Food ➔ Dubai (DXB)</span>
+          </button>
+          {(selectedCommodity !== 'all' || selectedDestination !== 'all' || selectedRegion !== 'all' || selectedAirline !== 'all' || searchQuery) && (
+            <button
+              onClick={() => {
+                setSelectedCommodity('all');
+                setSelectedDestination('all');
+                setSelectedRegion('all');
+                setSelectedAirline('all');
+                setSearchQuery('');
+              }}
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 underline ml-auto font-medium"
+            >
+              Reset Filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -444,14 +602,21 @@ export const RatesTable = () => {
                         {/* Commodity */}
                         <td className="py-3 px-3">
                           <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] ${
-                            item.commodity === 'seafood'
+                            item.commodity === 'flowers'
+                              ? 'bg-rose-950/60 border-rose-500/40 text-rose-300 font-semibold shadow-sm'
+                              : item.commodity === 'seafood'
                               ? 'bg-sky-950/60 border-sky-500/40 text-sky-300 font-semibold'
                               : item.commodity === 'meat' || item.commodity === 'meat_regular' || item.commodity === 'meat_exports'
                               ? 'bg-amber-950/40 border-amber-500/30 text-amber-300 font-medium'
                               : 'bg-emerald-950/40 border-emerald-500/20 text-emerald-300 font-medium'
                           }`}>
                             <span>{comm.icon || '📦'}</span>
-                            <span>{comm.name ? comm.name.split(' (')[0] : item.commodity}</span>
+                            <span>{COMMODITY_LABELS[item.commodity] || (comm.name ? comm.name.split(' (')[0] : item.commodity)}</span>
+                            {item.commodity === 'flowers' && (
+                              <span className="text-[9px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase font-mono tracking-tight">
+                                Flora
+                              </span>
+                            )}
                             {item.commodity === 'seafood' && (
                               <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/30 text-sky-200 border border-sky-400/40 uppercase font-bold tracking-tight">
                                 UAE

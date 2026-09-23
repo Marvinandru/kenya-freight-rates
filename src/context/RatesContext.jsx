@@ -1,17 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_RATES, AIRLINES, AIRPORTS, COMMODITY_TYPES } from '../data/initialRates';
+import { INITIAL_RATES, AIRLINES, AIRPORTS, COMMODITY_TYPES, calculateDailySpotRates } from '../data/initialRates';
 import { INITIAL_SHIPMENTS, INITIAL_CLIENTS } from '../data/initialShipments';
 import confetti from 'canvas-confetti';
 
 const RatesContext = createContext();
 
-const STORAGE_KEY = 'spedire_rates_v7';
+const STORAGE_KEY = 'spedire_rates_v10';
 const SHIPMENTS_KEY = 'spedire_shipments_v3';
 const CLIENTS_KEY = 'spedire_clients_v2';
 const AUTH_KEY = 'spedire_auth_user_v2';
 const PROFIT_KEY = 'spedire_profit_margin_v2';
-const TODAY_KEY = 'spedire_today_key_v3';
-const LAST_UPDATED_KEY = 'spedire_last_updated_v7';
+const TODAY_KEY = 'spedire_today_key_v10';
+const LAST_UPDATED_KEY = 'spedire_last_updated_v10';
+const LAST_CALC_KEY = 'spedire_last_calc_key_v10';
 
 const EXCHANGE_RATE_USD_KES = 129.50;
 
@@ -98,26 +99,46 @@ export const RatesProvider = ({ children }) => {
     }
   });
 
-  // Base Airline Rates - Always hydrate with INITIAL_RATES to include all routes (Kuwait, Kazakhstan, Italy, etc.)
+  // Base Airline Rates - Always hydrated and calculated daily from INITIAL_RATES
   const [rates, setRates] = useState(() => {
     try {
+      // Purge all legacy caches so stale browser storage never blocks new flowers or BZV rates
+      for (let i = 1; i <= 9; i++) {
+        try {
+          localStorage.removeItem(`spedire_rates_v${i}`);
+          localStorage.removeItem(`spedire_today_key_v${i}`);
+          localStorage.removeItem(`spedire_last_updated_v${i}`);
+          localStorage.removeItem(`spedire_last_calc_key_v${i}`);
+        } catch (e) {}
+      }
+      try { localStorage.removeItem('spedire_rates'); } catch (e) {}
+
       const saved = localStorage.getItem(STORAGE_KEY);
+      const now = new Date();
       if (saved) {
         const parsed = JSON.parse(saved);
-        const parsedMap = new Map(parsed.map(r => [r.id, r]));
-        // Merge so any new initial rates are guaranteed to be included
-        const merged = INITIAL_RATES.map(initItem => {
-          return parsedMap.has(initItem.id) ? parsedMap.get(initItem.id) : initItem;
-        });
-        const initIds = new Set(INITIAL_RATES.map(r => r.id));
-        parsed.forEach(p => {
-          if (!initIds.has(p.id)) merged.push(p);
-        });
-        return merged;
+        const hasFlowers = Array.isArray(parsed) && parsed.some(r => r.commodity === 'flowers');
+        const hasBzv = Array.isArray(parsed) && parsed.some(r => r.destination === 'BZV');
+        
+        if (hasFlowers && hasBzv && parsed.length >= INITIAL_RATES.length) {
+          const parsedMap = new Map(parsed.map(r => [r.id, r]));
+          const merged = INITIAL_RATES.map(initItem => {
+            return parsedMap.has(initItem.id) ? parsedMap.get(initItem.id) : initItem;
+          });
+          const initIds = new Set(INITIAL_RATES.map(r => r.id));
+          parsed.forEach(p => {
+            if (!initIds.has(p.id)) merged.push(p);
+          });
+          return calculateDailySpotRates(merged, now);
+        }
       }
-      return INITIAL_RATES;
+      const freshRates = calculateDailySpotRates(INITIAL_RATES, now);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(freshRates));
+      } catch (e) {}
+      return freshRates;
     } catch (e) {
-      return INITIAL_RATES;
+      return calculateDailySpotRates(INITIAL_RATES, new Date());
     }
   });
 
@@ -187,7 +208,7 @@ export const RatesProvider = ({ children }) => {
     setSelectedBookingRoute(null);
   };
 
-  // Manual & automatic refresh to today's date & live rates
+  // Manual & automatic refresh to today's date & live calculated rates
   const refreshToToday = (showToast = true) => {
     setIsRefreshing(true);
     const now = new Date();
@@ -198,15 +219,17 @@ export const RatesProvider = ({ children }) => {
     try {
       localStorage.setItem(TODAY_KEY, currentTodayKey);
       localStorage.setItem(LAST_UPDATED_KEY, formatted);
+      localStorage.setItem(LAST_CALC_KEY, currentTodayKey);
     } catch (e) {}
 
-    // Refresh rates validity and sync latest routes from INITIAL_RATES
+    // Refresh rates validity and re-calculate daily spot rates from latest INITIAL_RATES
     setRates(prevRates => {
       const prevMap = new Map(prevRates.map(r => [r.id, r]));
-      return INITIAL_RATES.map(initItem => {
+      const merged = INITIAL_RATES.map(initItem => {
         const existing = prevMap.get(initItem.id);
-        return existing ? { ...existing, validityDate: 'Today + 7 Days' } : initItem;
+        return existing ? { ...initItem, ...existing } : initItem;
       });
+      return calculateDailySpotRates(merged, now);
     });
 
     setTimeout(() => {
@@ -214,39 +237,60 @@ export const RatesProvider = ({ children }) => {
     }, 600);
 
     if (showToast) {
-      showNotification(`Rates & validity timestamp refreshed to live time: ${formatted}`, 'success');
+      showNotification(`Rates & spot validity calculated and refreshed on time: ${formatted}`, 'success');
     }
     return formatted;
   };
 
-  // Day rollover detection & mount refresh (guarantees refreshed rates & live time on every web page reload)
+  // Day rollover detection & mount refresh (guarantees refreshed rates & live time on every web page reload & midnight rollover)
   useEffect(() => {
-    const syncLiveProduceRates = () => {
+    const syncDailyProduceRates = (force = false) => {
       const now = new Date();
       const formatted = formatProduceDate(now);
       const currentTodayKey = getTodayKeyNairobi(now);
+      const lastCalc = localStorage.getItem(LAST_CALC_KEY);
+
       setLastUpdated(formatted);
       try {
         localStorage.setItem(TODAY_KEY, currentTodayKey);
         localStorage.setItem(LAST_UPDATED_KEY, formatted);
       } catch (e) {}
-    };
 
-    // Immediate sync on page reload/refresh
-    syncLiveProduceRates();
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        syncLiveProduceRates();
+      // If the calendar day has rolled over in Nairobi, or if forced
+      if (force || lastCalc !== currentTodayKey) {
+        setRates(prevRates => {
+          const prevMap = new Map(prevRates.map(r => [r.id, r]));
+          const merged = INITIAL_RATES.map(initItem => {
+            const existing = prevMap.get(initItem.id);
+            return existing ? { ...initItem, ...existing } : initItem;
+          });
+          return calculateDailySpotRates(merged, now);
+        });
+        try {
+          localStorage.setItem(LAST_CALC_KEY, currentTodayKey);
+        } catch (e) {}
+        if (lastCalc && lastCalc !== currentTodayKey) {
+          showNotification(`📅 Daily produce & cut flower spot rates recalculated and refreshed on time for ${formatted}!`, 'success');
+        }
       }
     };
 
-    window.addEventListener('focus', syncLiveProduceRates);
+    // Immediate sync on page reload/refresh
+    syncDailyProduceRates(false);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncDailyProduceRates(false);
+      }
+    };
+
+    window.addEventListener('focus', () => syncDailyProduceRates(false));
     document.addEventListener('visibilitychange', handleVisibility);
-    const interval = setInterval(syncLiveProduceRates, 30 * 1000);
+    // Periodic check every 30 seconds for timely midnight day-rollover
+    const interval = setInterval(() => syncDailyProduceRates(false), 30 * 1000);
 
     return () => {
-      window.removeEventListener('focus', syncLiveProduceRates);
+      window.removeEventListener('focus', () => syncDailyProduceRates(false));
       document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);
     };
@@ -693,10 +737,12 @@ export const RatesProvider = ({ children }) => {
   };
 
   const resetToDefaults = () => {
-    if (window.confirm('Reset all produce rates to initial daily defaults? Any custom edits will be reverted.')) {
-      setRates(INITIAL_RATES);
+    if (window.confirm('Reset all produce & cut flower rates to initial daily defaults? Any custom edits will be reverted.')) {
+      const fresh = calculateDailySpotRates(INITIAL_RATES, new Date());
+      setRates(fresh);
       localStorage.removeItem(STORAGE_KEY);
-      showNotification('Fresh produce rates restored to defaults.', 'info');
+      localStorage.removeItem(LAST_CALC_KEY);
+      showNotification('Fresh produce & cut flower rates restored to daily defaults.', 'info');
     }
   };
 

@@ -33,7 +33,7 @@ export const MarketInsights = () => {
           Horticulture Export Market & KEPHIS Intelligence
         </h2>
         <p className="text-sm text-slate-300 mt-1">
-          Daily updates on avocado harvesting season, EU False Codling Moth (FCM) inspections for fresh chillies, and JKIA cold storage space.
+          Daily updates on Kenya cut flower export peaks, FloraHolland cold corridors, avocado harvesting season, EU False Codling Moth (FCM) compliance, and JKIA cold storage space.
         </p>
       </div>
 
@@ -43,7 +43,7 @@ export const MarketInsights = () => {
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-400" />
-              Today’s Fresh Produce Advisories
+              Today’s Cut Flowers & Fresh Produce Advisories
             </h3>
             <div className="flex items-center gap-1.5 font-mono text-xs text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800">
               <Clock className="w-3 h-3 text-emerald-400" />

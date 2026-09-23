@@ -33,7 +33,7 @@ export const DailyBroadcast = () => {
       );
     }
 
-    let text = `✈️ *SPEDIRE KENYA | DAILY FRESH PRODUCE & MEAT BULLETIN* 🇰🇪\n`;
+    let text = `✈️ *SPEDIRE KENYA | DAILY HORTICULTURE, FLOWERS & PRODUCE BULLETIN* 🇰🇪\n`;
     text += `📅 *Date:* ${lastUpdated}\n`;
     text += `📍 *Origin:* Nairobi JKIA Cargo Hub (NBO)\n`;
     text += `🌱 *Category:* ${broadcastCategory.toUpperCase().replace('_', ' ')} AIR FREIGHT SPOT RATES\n`;
@@ -66,7 +66,7 @@ export const DailyBroadcast = () => {
     });
 
     text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `🌿 *Cold Chain:* Target +4°C (Avocados) | +8°C (Chillies) | 0°C to +2°C (Halal Meat & UAE Seafood Wet-Ice)\n`;
+    text += `🌿 *Cold Chain:* Target +2°C to +4°C (Fresh Cut Flowers) | +4°C (Avocados) | +8°C (Chillies) | 0°C to +2°C (Halal Meat & UAE Seafood Wet-Ice)\n`;
     text += `📑 *KEPHIS, HCDA & Veterinary Health:* Pre-clearance ready at JKIA\n`;
     text += `💵 *Payment Terms:* 100% Advance Payment via USD Bank Wire\n`;
     text += `⏱️ *Advance Booking:* Quotes assured 3 days in advance\n`;
@@ -95,13 +95,13 @@ export const DailyBroadcast = () => {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
             <Share2 className="w-3.5 h-3.5" />
-            <span>Produce & Meat Exporters Multi-Channel Broadcast</span>
+            <span>Flowers, Produce & Meat Exporters Multi-Channel Broadcast</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Daily Produce & Meat Broadcast & Printable Rate Card
+            Daily Flowers, Produce & Meat Broadcast & Printable Rate Card
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 mt-1">
-            Share daily avocado, chillies, herbs, mangoes, regular meat, UAE sea food & passion fruit export spot rates directly to exporter WhatsApp groups or print official rate cards.
+            Share daily flowers, avocado, chillies, herbs, mangoes, regular meat, UAE sea food & passion fruit export spot rates directly to exporter WhatsApp groups or print official rate cards.
           </p>
         </div>
 
@@ -142,6 +142,7 @@ export const DailyBroadcast = () => {
                   className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none"
                 >
                   <option value="all">🌍 All Export Commodities</option>
+                  <option value="flowers">🌹 Fresh Cut Flowers (Roses & Carnations)</option>
                   <option value="avocado">🥑 Fresh Avocados</option>
                   <option value="chillies">🌶️ Fresh Chillies</option>
                   <option value="herbs">🌿 Fresh Herbs</option>

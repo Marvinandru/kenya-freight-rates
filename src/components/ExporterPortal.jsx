@@ -176,6 +176,7 @@ export const ExporterPortal = () => {
     ];
 
     const commodityNames = {
+      flowers: 'Fresh Cut Flowers (Roses/Carnations)',
       passion_fruit: 'Passion Fruit',
       avocado: 'Hass Avocados (Size 14-20)',
       mangoes: 'Fresh Mangoes (Apple/Ngowe)',
@@ -712,6 +713,11 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                         <option value="BOM">Mumbai, India (BOM)</option>
                         <option value="JFK">New York, USA (JFK)</option>
                       </optgroup>
+                      <optgroup label="Africa & Regional">
+                        <option value="BZV">Brazzaville, Congo (BZV)</option>
+                        <option value="JNB">Johannesburg, South Africa (JNB)</option>
+                        <option value="EBB">Entebbe, Uganda (EBB)</option>
+                      </optgroup>
                     </select>
                   </div>
                 </div>
@@ -725,6 +731,7 @@ Kenya Plant Health Inspectorate Service (KEPHIS) & IATA Cargo Tariffs Compliant.
                       onChange={(e) => setNewCommodity(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                     >
+                      <option value="flowers">🌹 Fresh Cut Flowers (Roses/Carnations)</option>
                       <option value="avocado">🥑 Fresh Avocados (Hass/Fuerte)</option>
                       <option value="chillies">🌶️ Fresh Chillies (Bird’s Eye/Bullet)</option>
                       <option value="herbs">🌿 Fresh Herbs (Basil/Mint/Rosemary)</option>

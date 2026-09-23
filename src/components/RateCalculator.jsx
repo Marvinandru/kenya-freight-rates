@@ -57,9 +57,17 @@ export const RateCalculator = () => {
 
   const [copiedQuote, setCopiedQuote] = useState(false);
 
-  // Apply produce & meat preset (Arranged as: Avocado, Chillies, Herbs, Mangoes, Regular Meat, Sea Food Especially UAE, Passion Fruit)
+  // Apply produce & meat preset (Arranged as: Cut Flowers, Avocado, Chillies, Herbs, Mangoes, Regular Meat, Sea Food Especially UAE, Passion Fruit)
   const applyProducePreset = (type) => {
-    if (type === 'avocado') {
+    if (type === 'flowers' || type === 'cut_flowers') {
+      setCommodity('flowers');
+      setGrossWeight(1500);
+      setLength(120);
+      setWidth(100);
+      setHeight(160);
+      setPieces(2);
+      setDestination('AMS'); // Amsterdam FloraHolland Auction
+    } else if (type === 'avocado') {
       setCommodity('avocado');
       setGrossWeight(1800);
       setLength(120);
@@ -309,9 +317,15 @@ Notice: Bookings assured with 3 days advance confirmation`;
           Estimate landed air freight for Avocados, Chillies, Herbs, Mangoes, Regular Meat, Sea Food (UAE Express) & Passion Fruit, and compare all 12 airline quotes instantly.
         </p>
 
-        {/* Produce & Meat Quick Presets (Exact Order: Avocado -> Chillies -> Herbs -> Mangoes -> Regular Meat -> Sea Food -> Passion Fruit) */}
+        {/* Produce & Meat Quick Presets (Exact Order: Cut Flowers -> Avocado -> Chillies -> Herbs -> Mangoes -> Regular Meat -> Sea Food -> Passion Fruit) */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-slate-400">Quick Presets:</span>
+          <button
+            onClick={() => applyProducePreset('flowers')}
+            className="px-3 py-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-medium transition-all"
+          >
+            🌹 Cut Flowers (1,500 KG • AMS)
+          </button>
           <button
             onClick={() => applyProducePreset('avocado')}
             className="px-3 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/30 text-emerald-300 rounded-lg text-xs font-medium transition-all"
@@ -423,7 +437,9 @@ Notice: Bookings assured with 3 days advance confirmation`;
                   </optgroup>
                   <optgroup label="Americas & Africa">
                     <option value="JFK">New York, USA (JFK)</option>
+                    <option value="BZV">Brazzaville, Congo (BZV - Maya-Maya Intl)</option>
                     <option value="JNB">Johannesburg, South Africa (JNB)</option>
+                    <option value="EBB">Entebbe, Uganda (EBB)</option>
                   </optgroup>
                 </select>
               </div>

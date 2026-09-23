@@ -99,7 +99,7 @@ export const Navbar = () => {
               <span className="font-extrabold text-xl sm:text-2xl tracking-tight text-white leading-none">
                 Spe<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">dire</span>
               </span>
-              <p className="text-[11px] text-slate-400 font-normal leading-tight mt-1">Fresh Produce & Meat Air Freight Gateway</p>
+              <p className="text-[11px] text-slate-400 font-normal leading-tight mt-1">Cut Flowers, Fresh Produce & Meat Air Freight Gateway</p>
             </div>
           </a>
 
