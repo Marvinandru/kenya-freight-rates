@@ -9,7 +9,7 @@ const STORAGE_KEY = 'spedire_rates_v10';
 const SHIPMENTS_KEY = 'spedire_shipments_v3';
 const CLIENTS_KEY = 'spedire_clients_v2';
 const AUTH_KEY = 'spedire_auth_user_v2';
-const PROFIT_KEY = 'spedire_profit_margin_v2';
+const PROFIT_KEY = 'spedire_profit_margin_v3';
 const TODAY_KEY = 'spedire_today_key_v10';
 const LAST_UPDATED_KEY = 'spedire_last_updated_v10';
 const LAST_CALC_KEY = 'spedire_last_calc_key_v10';
@@ -92,8 +92,13 @@ export const RatesProvider = ({ children }) => {
   // Profit Margin per KG (Default $0.30 USD for business owner = $300.00 USD / Metric Ton)
   const [profitMarginPerKg, setProfitMarginPerKg] = useState(() => {
     try {
+      localStorage.removeItem('spedire_profit_margin_v1');
+      localStorage.removeItem('spedire_profit_margin_v2');
       const saved = localStorage.getItem(PROFIT_KEY);
-      return saved !== null ? Number(saved) : 0.30;
+      if (saved !== null && !isNaN(Number(saved)) && Number(saved) >= 0.30) {
+        return Number(saved);
+      }
+      return 0.30;
     } catch (e) {
       return 0.30;
     }
@@ -332,7 +337,7 @@ export const RatesProvider = ({ children }) => {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Helper to calculate quoted rate with profit margin per KG ($0.20/kg)
+  // Helper to calculate quoted rate with profit margin per KG ($0.30/kg)
   const getSellingRate = (baseRate) => {
     if (baseRate === undefined || baseRate === null) return 0;
     return Number((Number(baseRate) + profitMarginPerKg).toFixed(2));
@@ -340,13 +345,13 @@ export const RatesProvider = ({ children }) => {
 
   // Helper to calculate quoted price per Metric Ton (1 MT = 1000 KG)
   // Quoted price per MT = (baseRate + profitMarginPerKg) * 1000
-  // Explicitly includes the $0.20 USD/KG markup = +$200.00 USD / MT
+  // Explicitly includes the $0.30 USD/KG markup = +$300.00 USD / MT
   const getSellingRatePerMT = (baseRate) => {
     if (baseRate === undefined || baseRate === null) return 0;
     return Number(((Number(baseRate) + profitMarginPerKg) * 1000).toFixed(2));
   };
 
-  const markupPerMT = Number((profitMarginPerKg * 1000).toFixed(2)); // $200.00 USD / MT markup
+  const markupPerMT = Number((profitMarginPerKg * 1000).toFixed(2)); // $300.00 USD / MT markup
 
   // Auth Functions with credentials & persistence
   const login = (email, password = '') => {
