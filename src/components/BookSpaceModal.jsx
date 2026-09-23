@@ -80,9 +80,28 @@ export const BookSpaceModal = () => {
     tempRange: '+4°C'
   };
 
-  // Base rate and selling rate calculation (Markup is seamlessly included, NEVER indicated to client)
-  const baseRate = item.baseRatePerKg || item.rate1000kg || 1.15;
-  const quotedRatePerKg = item.quotedRatePerKg || getSellingRate(baseRate);
+  // Determine appropriate base tier rate dynamically based on current weightKg
+  let currentBaseRate = item.baseRatePerKg || item.rate1000kg || 1.15;
+  let currentTier = '+1000kg';
+  if (weightKg < 100) {
+    currentBaseRate = item.rate45kg || item.rate100kg || currentBaseRate;
+    currentTier = '+45kg';
+  } else if (weightKg < 300) {
+    currentBaseRate = item.rate100kg || currentBaseRate;
+    currentTier = '+100kg';
+  } else if (weightKg < 500) {
+    currentBaseRate = item.rate300kg || currentBaseRate;
+    currentTier = '+300kg';
+  } else if (weightKg < 1000) {
+    currentBaseRate = item.rate500kg || currentBaseRate;
+    currentTier = '+500kg';
+  } else {
+    currentBaseRate = item.rate1000kg || currentBaseRate;
+    currentTier = '+1000kg (Bulk MT)';
+  }
+
+  const baseRate = currentBaseRate;
+  const quotedRatePerKg = Number((baseRate + profitMarginPerKg).toFixed(2));
   const quotedRatePerMT = Number((quotedRatePerKg * 1000).toFixed(2));
 
   // Flight Space checking
@@ -93,7 +112,10 @@ export const BookSpaceModal = () => {
 
   // Produce local handling fees (4 Categories: KAA handling, Board Fee fixed $17, Security SCC, 16% VAT)
   const produceCost = calculateProduceCostBreakdown(quotedRatePerKg, weightKg);
-  const totalBaseFreight = Math.max(item.minCharge || 0, quotedRatePerKg * weightKg);
+  const calculatedBaseFreight = Number((quotedRatePerKg * weightKg).toFixed(2));
+  const minChargeVal = Number(item.minCharge) || 0;
+  const isMinChargeApplied = minChargeVal > 0 && calculatedBaseFreight < minChargeVal;
+  const totalBaseFreight = Math.max(minChargeVal, calculatedBaseFreight);
   const totalFuel = Number(((item.fuelSurcharge || 0.38) * weightKg).toFixed(2));
   const grandTotalUSD = Number((totalBaseFreight + totalFuel + produceCost.total).toFixed(2));
 
@@ -262,14 +284,14 @@ export const BookSpaceModal = () => {
                 <div className="relative">
                   <input
                     type="number"
-                    min="50"
-                    step="50"
+                    min="10"
+                    step="10"
                     value={weightKg}
-                    onChange={(e) => setWeightKg(Number(e.target.value) || 100)}
+                    onChange={(e) => setWeightKg(Number(e.target.value) || 10)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:border-emerald-500 focus:outline-none"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">
-                    KG ({(weightKg / 1000).toFixed(2)} MT)
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-xs">
+                    KG ({weightKg >= 1000 ? `${(weightKg / 1000).toFixed(2)} MT` : `${weightKg} KG`})
                   </span>
                 </div>
               </div>
@@ -311,7 +333,7 @@ export const BookSpaceModal = () => {
                 Produce Cost & Landed Air Freight Breakdown
               </span>
               <span className="font-mono text-emerald-400 font-bold">
-                Quoted: {formatPrice(quotedRatePerMT)} / MT ({formatPrice(quotedRatePerKg)}/kg)
+                {isMinChargeApplied ? `Airline Min Charge: ${formatPrice(minChargeVal)}` : `Quoted: ${formatPrice(quotedRatePerMT)} / MT (${formatPrice(quotedRatePerKg)}/kg)`}
               </span>
             </h4>
 
@@ -337,7 +359,7 @@ export const BookSpaceModal = () => {
                 <span className="text-teal-300 font-bold">{formatPrice(produceCost.total)}</span>
               </div>
               <div className="flex justify-between text-slate-400">
-                <span>Base Air Freight ({weightKg} KG) + FSC Fuel:</span>
+                <span>Base Air Freight ({weightKg} KG){isMinChargeApplied ? ' (Min Charge Applied)' : ` (@$${quotedRatePerKg}/kg)`} + FSC Fuel:</span>
                 <span className="text-slate-200">{formatPrice(totalBaseFreight + totalFuel)}</span>
               </div>
               <div className="pt-2 border-t border-slate-700 flex justify-between items-center text-sm font-bold text-emerald-400">

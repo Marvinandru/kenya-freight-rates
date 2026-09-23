@@ -47,25 +47,35 @@ export const RateCalculator = () => {
   const [commodity, setCommodity] = useState(selectedRouteForCalc?.commodity || 'avocado');
   const [grossWeight, setGrossWeight] = useState(1200);
   
-  // Dimensions mode
-  const [dimensionMode, setDimensionMode] = useState('dimensions');
-  const [length, setLength] = useState(120); // cm
-  const [width, setWidth] = useState(100);  // cm (Euro/Standard produce pallet)
-  const [height, setHeight] = useState(160); // cm
-  const [pieces, setPieces] = useState(2);   // 2 complete pallets
-  const [customCbm, setCustomCbm] = useState(7.6);
+  // Dimensions mode: default to 'actual' so entering weights like 40kg works directly without phantom pallet weights
+  const [dimensionMode, setDimensionMode] = useState('actual'); // 'actual' | 'dimensions' | 'cbm'
+  const [length, setLength] = useState(40); // cm (carton / box)
+  const [width, setWidth] = useState(30);  // cm
+  const [height, setHeight] = useState(25); // cm
+  const [pieces, setPieces] = useState(4);   // cartons
+  const [customCbm, setCustomCbm] = useState(0.24);
 
   const [copiedQuote, setCopiedQuote] = useState(false);
 
-  // Apply produce & meat preset (Arranged as: Cut Flowers, Avocado, Chillies, Herbs, Mangoes, Regular Meat, Sea Food Especially UAE, Passion Fruit)
+  // Apply produce & meat preset (Arranged as: Cut Flowers, Avocado, Chillies, Herbs, Mangoes, Regular Meat, Sea Food Especially UAE, Passion Fruit, Congo 40kg)
   const applyProducePreset = (type) => {
-    if (type === 'flowers' || type === 'cut_flowers') {
+    if (type === 'bzv_40kg') {
+      setCommodity('flowers');
+      setGrossWeight(40);
+      setDestination('BZV');
+      setDimensionMode('actual');
+      setLength(40);
+      setWidth(30);
+      setHeight(25);
+      setPieces(4);
+    } else if (type === 'flowers' || type === 'cut_flowers') {
       setCommodity('flowers');
       setGrossWeight(1500);
       setLength(120);
       setWidth(100);
       setHeight(160);
       setPieces(2);
+      setDimensionMode('dimensions');
       setDestination('AMS'); // Amsterdam FloraHolland Auction
     } else if (type === 'avocado') {
       setCommodity('avocado');
@@ -74,6 +84,7 @@ export const RateCalculator = () => {
       setWidth(100);
       setHeight(160);
       setPieces(2);
+      setDimensionMode('dimensions');
       setDestination('AMS');
     } else if (type === 'chillies') {
       setCommodity('chillies');
@@ -145,6 +156,20 @@ export const RateCalculator = () => {
 
   // Volume & Chargeable Weight Math
   const { volumeCbm, volumetricWeight, chargeableWeight, densityRatio } = useMemo(() => {
+    const gross = Number(grossWeight) || 0;
+
+    // In 'actual' mode, no volumetric penalty is applied (ideal for loose cartons, sample boxes like 40kg)
+    if (dimensionMode === 'actual') {
+      const standardDensity = commodity === 'flowers' ? 120 : 175;
+      const estimatedCbm = Number((gross / standardDensity).toFixed(2));
+      return {
+        volumeCbm: estimatedCbm,
+        volumetricWeight: gross,
+        chargeableWeight: gross,
+        densityRatio: standardDensity
+      };
+    }
+
     let cbm = 0;
     if (dimensionMode === 'dimensions') {
       const singleVolM3 = (Number(length) * Number(width) * Number(height)) / 1000000;
@@ -154,7 +179,6 @@ export const RateCalculator = () => {
     }
 
     const volWeight = Number((cbm * 166.67).toFixed(1));
-    const gross = Number(grossWeight) || 0;
     const chargeable = Math.max(gross, volWeight);
     const density = cbm > 0 ? (gross / cbm).toFixed(1) : 0;
 
@@ -164,7 +188,7 @@ export const RateCalculator = () => {
       chargeableWeight: Number(chargeable.toFixed(1)),
       densityRatio: density
     };
-  }, [dimensionMode, length, width, height, pieces, customCbm, grossWeight]);
+  }, [dimensionMode, length, width, height, pieces, customCbm, grossWeight, commodity]);
 
   // Find all airlines operating this route & commodity
   const matchedCarriers = useMemo(() => {
@@ -213,7 +237,12 @@ export const RateCalculator = () => {
       // 4. 16% VAT added to total
       const feeBreakdown = calculateProduceCostBreakdown(quotedRatePerKg, chargeableWeight);
 
-      const totalBaseFreight = Math.max(item.minCharge || 0, quotedRatePerKg * chargeableWeight);
+      // Check whether weight * quoted rate is less than airline minimum charge
+      const calculatedBaseFreight = Number((quotedRatePerKg * chargeableWeight).toFixed(2));
+      const minChargeVal = Number(item.minCharge) || 0;
+      const isMinChargeApplied = minChargeVal > 0 && calculatedBaseFreight < minChargeVal;
+      const totalBaseFreight = Math.max(minChargeVal, calculatedBaseFreight);
+      
       const totalFuel = Number(((item.fuelSurcharge || 0.38) * chargeableWeight).toFixed(2));
       const grandTotalUSD = Number((totalBaseFreight + totalFuel + feeBreakdown.total).toFixed(2));
       const effectiveAllInPerKg = Number((grandTotalUSD / (chargeableWeight || 1)).toFixed(2));
@@ -226,7 +255,10 @@ export const RateCalculator = () => {
         airlineName: airline.name,
         airlineCode: airline.code,
         airlineLogoBg: airline.logoBg,
-        tierApplied,
+        tierApplied: isMinChargeApplied ? 'Airline Min Charge' : tierApplied,
+        isMinChargeApplied,
+        minChargeVal,
+        calculatedBaseFreight,
         baseRatePerKg,
         quotedRatePerKg,
         quotedRatePerMT,
@@ -320,6 +352,12 @@ Notice: Bookings assured with 3 days advance confirmation`;
         {/* Produce & Meat Quick Presets (Exact Order: Cut Flowers -> Avocado -> Chillies -> Herbs -> Mangoes -> Regular Meat -> Sea Food -> Passion Fruit) */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-slate-400">Quick Presets:</span>
+          <button
+            onClick={() => applyProducePreset('bzv_40kg')}
+            className="px-3 py-1 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 rounded-lg text-xs font-semibold transition-all shadow-sm"
+          >
+            🇨🇬 Congo Brazzaville (40 KG Sample Box)
+          </button>
           <button
             onClick={() => applyProducePreset('flowers')}
             className="px-3 py-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 rounded-lg text-xs font-medium transition-all"
@@ -482,34 +520,83 @@ Notice: Bookings assured with 3 days advance confirmation`;
 
           {/* Dimensions & Pallet Math */}
           <div className="glass-panel p-6 rounded-2xl border border-slate-800 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Scale className="w-4 h-4 text-teal-400" />
-                2. Pallet / Carton Dimensions
+                2. Weight & Dimensions Rating
               </h3>
 
-              <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-0.5 text-[10px] font-semibold">
+              <div className="flex flex-wrap bg-slate-900 border border-slate-700 rounded-lg p-0.5 text-[10px] font-semibold">
                 <button
-                  onClick={() => setDimensionMode('dimensions')}
-                  className={`px-2 py-1 rounded-md transition-all ${
-                    dimensionMode === 'dimensions' ? 'bg-emerald-500 text-white' : 'text-slate-400'
+                  type="button"
+                  onClick={() => setDimensionMode('actual')}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    dimensionMode === 'actual' ? 'bg-emerald-500 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  LxWxH (cm)
+                  ⚖️ Actual Weight (Direct)
                 </button>
                 <button
-                  onClick={() => setDimensionMode('cbm')}
-                  className={`px-2 py-1 rounded-md transition-all ${
-                    dimensionMode === 'cbm' ? 'bg-emerald-500 text-white' : 'text-slate-400'
+                  type="button"
+                  onClick={() => setDimensionMode('dimensions')}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    dimensionMode === 'dimensions' ? 'bg-emerald-500 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Direct CBM
+                  📦 Boxes / Pallets (LxWxH)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDimensionMode('cbm')}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    dimensionMode === 'cbm' ? 'bg-emerald-500 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  📐 Direct CBM
                 </button>
               </div>
             </div>
 
-            {dimensionMode === 'dimensions' ? (
+            {dimensionMode === 'actual' ? (
+              <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-xs space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>Billed Strictly by Actual Weight ({grossWeight} KG)</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Cargo is charged on its exact gross weight of <strong>{grossWeight} KG</strong>. Standard produce density is applied without volumetric airfreight penalties. Minimum airline charges apply if total base freight is under the airline threshold.
+                </p>
+              </div>
+            ) : dimensionMode === 'dimensions' ? (
               <div className="space-y-3 text-xs">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[11px] text-slate-400">Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLength(40);
+                      setWidth(30);
+                      setHeight(25);
+                      setPieces(Math.max(1, Math.ceil(grossWeight / 10)));
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+                  >
+                    📦 Export Cartons (40×30×25cm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLength(120);
+                      setWidth(100);
+                      setHeight(160);
+                      setPieces(Math.max(1, Math.ceil(grossWeight / 600)));
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+                  >
+                    🏗️ Air Pallet (120×100×160cm)
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block text-slate-400 mb-1">Length (cm)</label>
@@ -541,7 +628,7 @@ Notice: Bookings assured with 3 days advance confirmation`;
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 mb-1">Number of Produce Pallets / Skids / Boxes</label>
+                  <label className="block text-slate-400 mb-1">Number of Produce Boxes / Cartons / Pallets</label>
                   <input
                     type="number"
                     min="1"
@@ -557,7 +644,7 @@ Notice: Bookings assured with 3 days advance confirmation`;
                 <div className="relative">
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.05"
                     value={customCbm}
                     onChange={(e) => setCustomCbm(Number(e.target.value))}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono text-sm focus:border-emerald-500"
@@ -570,13 +657,23 @@ Notice: Bookings assured with 3 days advance confirmation`;
             {/* Diagnostic */}
             <div className="mt-4 p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
               <div className="flex justify-between items-center text-slate-400">
-                <span>Total Volume:</span>
-                <span className="font-mono text-white font-semibold">{volumeCbm} CBM</span>
+                <span>Rating Mode:</span>
+                <span className="font-mono text-white font-semibold capitalize">
+                  {dimensionMode === 'actual' ? 'Actual Gross Weight' : dimensionMode === 'dimensions' ? 'Carton / Pallet Volumetric' : 'Direct CBM Volumetric'}
+                </span>
               </div>
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Volumetric Weight (1:167):</span>
-                <span className="font-mono text-amber-400 font-semibold">{volumetricWeight} KG</span>
-              </div>
+              {dimensionMode !== 'actual' && (
+                <>
+                  <div className="flex justify-between items-center text-slate-400">
+                    <span>Total Volume:</span>
+                    <span className="font-mono text-white font-semibold">{volumeCbm} CBM</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-400">
+                    <span>Volumetric Weight (1:167):</span>
+                    <span className="font-mono text-amber-400 font-semibold">{volumetricWeight} KG</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between items-center text-slate-400">
                 <span>Actual Gross Weight:</span>
                 <span className="font-mono text-emerald-400 font-semibold">{grossWeight} KG</span>
@@ -653,7 +750,11 @@ Notice: Bookings assured with 3 days advance confirmation`;
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-extrabold text-base text-white">{carrier.airlineName}</h4>
-                            <span className="text-[10px] font-mono font-bold bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
+                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                              carrier.isMinChargeApplied 
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
+                                : 'bg-slate-800 text-slate-300'
+                            }`}>
                               {carrier.tierApplied}
                             </span>
                             <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
@@ -665,13 +766,21 @@ Notice: Bookings assured with 3 days advance confirmation`;
                             </span>
                           </div>
                           <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-2 font-mono">
-                            <span className="text-emerald-300 font-bold">
-                              {formatPrice(carrier.quotedRatePerMT)} / MT
-                            </span>
-                            <span className="text-slate-500">•</span>
-                            <span className="text-slate-300">
-                              {formatPrice(carrier.quotedRatePerKg)} / KG
-                            </span>
+                            {carrier.isMinChargeApplied ? (
+                              <span className="text-amber-300 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded text-[11px] border border-amber-500/20">
+                                Min. Airline Base Charge: {formatPrice(carrier.minChargeVal)} (weight rate would be {formatPrice(carrier.calculatedBaseFreight)})
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-emerald-300 font-bold">
+                                  {formatPrice(carrier.quotedRatePerMT)} / MT
+                                </span>
+                                <span className="text-slate-500">•</span>
+                                <span className="text-slate-300">
+                                  {formatPrice(carrier.quotedRatePerKg)} / KG ({carrier.tierApplied})
+                                </span>
+                              </>
+                            )}
                             <span className="text-slate-500">•</span>
                             <span className="flex items-center gap-1 text-slate-400">
                               <Clock className="w-3 h-3 text-emerald-400" /> {carrier.transitTime}
@@ -682,7 +791,9 @@ Notice: Bookings assured with 3 days advance confirmation`;
 
                       {/* Total Cost */}
                       <div className="text-left sm:text-right">
-                        <div className="text-xs text-slate-400">Total Landed Freight ({(chargeableWeight / 1000).toFixed(2)} MT)</div>
+                        <div className="text-xs text-slate-400">
+                          Total Landed Freight ({chargeableWeight >= 1000 ? `${(chargeableWeight / 1000).toFixed(2)} MT` : `${chargeableWeight} KG`})
+                        </div>
                         <div className="text-2xl font-mono font-extrabold text-emerald-400">
                           {formatPrice(carrier.grandTotalUSD)}
                         </div>
@@ -702,8 +813,12 @@ Notice: Bookings assured with 3 days advance confirmation`;
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-[11px] font-mono bg-slate-950/60 p-2.5 rounded-xl">
                         <div>
-                          <span className="text-slate-500 block text-[10px]">Base Freight:</span>
-                          <span className="text-slate-200">{formatPrice(carrier.totalBaseFreight)}</span>
+                          <span className="text-slate-500 block text-[10px]">
+                            Base Freight {carrier.isMinChargeApplied ? '(Min Charge)' : `@$${carrier.quotedRatePerKg}/kg`}:
+                          </span>
+                          <span className={`font-semibold ${carrier.isMinChargeApplied ? 'text-amber-300' : 'text-slate-200'}`}>
+                            {formatPrice(carrier.totalBaseFreight)}
+                          </span>
                         </div>
                         <div>
                           <span className="text-slate-500 block text-[10px]">Fuel (FSC):</span>
