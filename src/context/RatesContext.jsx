@@ -1,836 +1,352 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_RATES, AIRLINES, AIRPORTS, COMMODITY_TYPES, calculateDailySpotRates } from '../data/initialRates';
-import { INITIAL_SHIPMENTS, INITIAL_CLIENTS } from '../data/initialShipments';
-import confetti from 'canvas-confetti';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  isConfigured,
+  requireBackend,
+  supabase,
+  unwrap,
+} from "../lib/supabase";
+import { validateFile } from "../lib/documents";
+import sampleRates from "../data/sampleRates.json";
 
-const RatesContext = createContext();
-
-const STORAGE_KEY = 'spedire_rates_v10';
-const SHIPMENTS_KEY = 'spedire_shipments_v3';
-const CLIENTS_KEY = 'spedire_clients_v2';
-const AUTH_KEY = 'spedire_auth_user_v2';
-const PROFIT_KEY = 'spedire_profit_margin_v3';
-const TODAY_KEY = 'spedire_today_key_v10';
-const LAST_UPDATED_KEY = 'spedire_last_updated_v10';
-const LAST_CALC_KEY = 'spedire_last_calc_key_v10';
-
-const EXCHANGE_RATE_USD_KES = 129.50;
-
-// Calculate Produce Cost in 4 Categories:
-// 1. KAA Handling Fees as 0.08$ * (price/Kg)
-// 2. Board Fee - fixed 17$
-// 3. Security SCC as 0.07$ * (price/Kg)
-// 4. 16% VAT added to total
-export const calculateProduceCostBreakdown = (pricePerKg = 1.0, weightKg = 1000) => {
-  const price = Number(pricePerKg) || 1.0;
-  const weight = Number(weightKg) || 1;
-  // 1. KAA Handling Fees as 0.08$ * (price/Kg) * weight
-  const kaaHandling = Number((0.08 * price * weight).toFixed(2));
-  // 2. Board Fee - fixed 17$
-  const boardFee = 17.00;
-  // 3. Security SCC as 0.07$ * (price/Kg) * weight
-  const securityScc = Number((0.07 * price * weight).toFixed(2));
-  // Subtotal before VAT
-  const subtotal = Number((kaaHandling + boardFee + securityScc).toFixed(2));
-  // 4. 16% VAT added to total
-  const vat16 = Number((subtotal * 0.16).toFixed(2));
-  const total = Number((subtotal + vat16).toFixed(2));
-
-  return {
-    kaaHandling,
-    boardFee,
-    securityScc,
-    subtotal,
-    vat16,
-    total,
-    effectivePerKg: Number((total / weight).toFixed(3))
-  };
-};
-
-// Nairobi East Africa Time format: e.g. "4 Sept 2026, 12:45 EAT"
-export const formatProduceDate = (date = new Date()) => {
-  try {
-    return new Intl.DateTimeFormat('en-KE', { 
-      timeZone: 'Africa/Nairobi',
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date) + ' EAT';
-  } catch (e) {
-    return date.toLocaleDateString('en-KE', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }) + ' EAT';
-  }
-};
-
-// Nairobi day key format: e.g. "2026-09-04"
-export const getTodayKeyNairobi = (date = new Date()) => {
-  try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(date);
-  } catch (e) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
-};
-
-export const isDateToday = (timestampOrDate) => {
-  if (!timestampOrDate) return false;
-  const target = new Date(Number(timestampOrDate));
-  if (isNaN(target.getTime())) return false;
-  return getTodayKeyNairobi(target) === getTodayKeyNairobi(new Date());
-};
-
-export const RatesProvider = ({ children }) => {
-  // Profit Margin per KG (Default $0.30 USD for business owner = $300.00 USD / Metric Ton)
-  const [profitMarginPerKg, setProfitMarginPerKg] = useState(() => {
-    try {
-      localStorage.removeItem('spedire_profit_margin_v1');
-      localStorage.removeItem('spedire_profit_margin_v2');
-      const saved = localStorage.getItem(PROFIT_KEY);
-      if (saved !== null && !isNaN(Number(saved)) && Number(saved) >= 0.30) {
-        return Number(saved);
-      }
-      return 0.30;
-    } catch (e) {
-      return 0.30;
-    }
-  });
-
-  // Base Airline Rates - Always hydrated and calculated daily from INITIAL_RATES
-  const [rates, setRates] = useState(() => {
-    try {
-      // Purge all legacy caches so stale browser storage never blocks new flowers or BZV rates
-      for (let i = 1; i <= 9; i++) {
-        try {
-          localStorage.removeItem(`spedire_rates_v${i}`);
-          localStorage.removeItem(`spedire_today_key_v${i}`);
-          localStorage.removeItem(`spedire_last_updated_v${i}`);
-          localStorage.removeItem(`spedire_last_calc_key_v${i}`);
-        } catch (e) {}
-      }
-      try { localStorage.removeItem('spedire_rates'); } catch (e) {}
-
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const now = new Date();
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const hasFlowers = Array.isArray(parsed) && parsed.some(r => r.commodity === 'flowers');
-        const hasBzv = Array.isArray(parsed) && parsed.some(r => r.destination === 'BZV');
-        
-        if (hasFlowers && hasBzv && parsed.length >= INITIAL_RATES.length) {
-          const parsedMap = new Map(parsed.map(r => [r.id, r]));
-          const merged = INITIAL_RATES.map(initItem => {
-            return parsedMap.has(initItem.id) ? parsedMap.get(initItem.id) : initItem;
-          });
-          const initIds = new Set(INITIAL_RATES.map(r => r.id));
-          parsed.forEach(p => {
-            if (!initIds.has(p.id)) merged.push(p);
-          });
-          return calculateDailySpotRates(merged, now);
-        }
-      }
-      const freshRates = calculateDailySpotRates(INITIAL_RATES, now);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(freshRates));
-      } catch (e) {}
-      return freshRates;
-    } catch (e) {
-      return calculateDailySpotRates(INITIAL_RATES, new Date());
-    }
-  });
-
-  // Shipments & Export Documents
-  const [shipments, setShipments] = useState(() => {
-    try {
-      const saved = localStorage.getItem(SHIPMENTS_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_SHIPMENTS;
-    } catch (e) {
-      return INITIAL_SHIPMENTS;
-    }
-  });
-
-  // Client accounts
-  const [clients, setClients] = useState(() => {
-    try {
-      const saved = localStorage.getItem(CLIENTS_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
-    } catch (e) {
-      return INITIAL_CLIENTS;
-    }
-  });
-
-  // Current Logged-in User
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem(AUTH_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_CLIENTS[0]; // Default logged in for immediate usability
-    } catch (e) {
-      return INITIAL_CLIENTS[0];
-    }
-  });
-
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'signup'
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // When refreshing the web page, the time and rates always refresh dynamically to right now!
-  const [lastUpdated, setLastUpdated] = useState(() => {
-    const fresh = formatProduceDate(new Date());
-    try {
-      localStorage.setItem(TODAY_KEY, getTodayKeyNairobi());
-      localStorage.setItem(LAST_UPDATED_KEY, fresh);
-    } catch (e) {}
-    return fresh;
-  });
-
-  const [currencyMode, setCurrencyMode] = useState('USD');
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('rates'); // 'rates' | 'calculator' | 'portal' | 'broadcast' | 'insights'
-  const [selectedRouteForCalc, setSelectedRouteForCalc] = useState(null);
-  const [selectedRouteForHistory, setSelectedRouteForHistory] = useState(null);
-  const [selectedShipmentForModal, setSelectedShipmentForModal] = useState(null);
+const RatesContext = createContext(null);
+export const useRates = () => useContext(RatesContext);
+export function RatesProvider({ children }) {
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(isConfigured);
+  const [authDialog, setAuthDialog] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [rates, setRates] = useState(isConfigured ? [] : sampleRates);
+  const [ratesLoading, setRatesLoading] = useState(isConfigured);
+  const [ratesError, setRatesError] = useState("");
+  const [shipments, setShipments] = useState([]);
+  const [shipmentsLoading, setShipmentsLoading] = useState(false);
+  const [shipmentsError, setShipmentsError] = useState("");
   const [notification, setNotification] = useState(null);
+  const userRef = useRef(null);
+  const timer = useRef(null);
+  const user = session?.user ?? null;
+  const isStaff = ["staff", "admin"].includes(user?.app_metadata?.role);
+  // Update at render time so requests from a previous session cannot populate this one.
+  userRef.current = user?.id ?? null;
+  const notify = useCallback((message, type = "success") => {
+    clearTimeout(timer.current);
+    setNotification({ message, type });
+    timer.current = setTimeout(() => setNotification(null), 6000);
+  }, []);
+  useEffect(() => () => clearTimeout(timer.current), []);
 
-  // Flight Space Booking & Order Placement Modal State
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [selectedBookingRoute, setSelectedBookingRoute] = useState(null);
-
-  const openBookingModal = (routeOrCarrier) => {
-    setSelectedBookingRoute(routeOrCarrier);
-    setIsBookingModalOpen(true);
-  };
-
-  const closeBookingModal = () => {
-    setIsBookingModalOpen(false);
-    setSelectedBookingRoute(null);
-  };
-
-  // Manual & automatic refresh to today's date & live calculated rates
-  const refreshToToday = (showToast = true) => {
-    setIsRefreshing(true);
-    const now = new Date();
-    const formatted = formatProduceDate(now);
-    const currentTodayKey = getTodayKeyNairobi(now);
-
-    setLastUpdated(formatted);
-    try {
-      localStorage.setItem(TODAY_KEY, currentTodayKey);
-      localStorage.setItem(LAST_UPDATED_KEY, formatted);
-      localStorage.setItem(LAST_CALC_KEY, currentTodayKey);
-    } catch (e) {}
-
-    // Refresh rates validity and re-calculate daily spot rates from latest INITIAL_RATES
-    setRates(prevRates => {
-      const prevMap = new Map(prevRates.map(r => [r.id, r]));
-      const merged = INITIAL_RATES.map(initItem => {
-        const existing = prevMap.get(initItem.id);
-        return existing ? { ...initItem, ...existing } : initItem;
-      });
-      return calculateDailySpotRates(merged, now);
-    });
-
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 600);
-
-    if (showToast) {
-      showNotification(`Rates & spot validity calculated and refreshed on time: ${formatted}`, 'success');
-    }
-    return formatted;
-  };
-
-  // Day rollover detection & mount refresh (guarantees refreshed rates & live time on every web page reload & midnight rollover)
   useEffect(() => {
-    const syncDailyProduceRates = (force = false) => {
-      const now = new Date();
-      const formatted = formatProduceDate(now);
-      const currentTodayKey = getTodayKeyNairobi(now);
-      const lastCalc = localStorage.getItem(LAST_CALC_KEY);
-
-      setLastUpdated(formatted);
-      try {
-        localStorage.setItem(TODAY_KEY, currentTodayKey);
-        localStorage.setItem(LAST_UPDATED_KEY, formatted);
-      } catch (e) {}
-
-      // If the calendar day has rolled over in Nairobi, or if forced
-      if (force || lastCalc !== currentTodayKey) {
-        setRates(prevRates => {
-          const prevMap = new Map(prevRates.map(r => [r.id, r]));
-          const merged = INITIAL_RATES.map(initItem => {
-            const existing = prevMap.get(initItem.id);
-            return existing ? { ...initItem, ...existing } : initItem;
-          });
-          return calculateDailySpotRates(merged, now);
-        });
-        try {
-          localStorage.setItem(LAST_CALC_KEY, currentTodayKey);
-        } catch (e) {}
-        if (lastCalc && lastCalc !== currentTodayKey) {
-          showNotification(`📅 Daily produce & cut flower spot rates recalculated and refreshed on time for ${formatted}!`, 'success');
-        }
-      }
-    };
-
-    // Immediate sync on page reload/refresh
-    syncDailyProduceRates(false);
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        syncDailyProduceRates(false);
-      }
-    };
-
-    window.addEventListener('focus', () => syncDailyProduceRates(false));
-    document.addEventListener('visibilitychange', handleVisibility);
-    // Periodic check every 30 seconds for timely midnight day-rollover
-    const interval = setInterval(() => syncDailyProduceRates(false), 30 * 1000);
-
-    return () => {
-      window.removeEventListener('focus', () => syncDailyProduceRates(false));
-      document.removeEventListener('visibilitychange', handleVisibility);
-      clearInterval(interval);
-    };
+    // Remove insecure prototype credentials and records; never import them into real accounts.
+    try {
+      Object.keys(localStorage)
+        .filter((key) =>
+          /^spedire_(auth|clients|shipments|profit|rates|today|last_)/.test(
+            key,
+          ),
+        )
+        .forEach((key) => localStorage.removeItem(key));
+    } catch {
+      /* Storage may be disabled; hosted auth will report its own errors. */
+    }
+    if (!supabase) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      setSession(nextSession);
+      setAuthLoading(false);
+      if (event === "PASSWORD_RECOVERY") setAuthDialog("recovery");
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Persistence
-  useEffect(() => {
+  const loadRates = useCallback(async () => {
+    if (!supabase) return;
+    setRatesLoading(true);
+    setRatesError("");
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rates));
-    } catch (e) {}
-  }, [rates]);
+      setRates(
+        unwrap(
+          await supabase
+            .from("rates")
+            .select("*")
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(SHIPMENTS_KEY, JSON.stringify(shipments));
-    } catch (e) {}
-  }, [shipments]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
-    } catch (e) {}
-  }, [clients]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
-    } catch (e) {}
-  }, [currentUser]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(PROFIT_KEY, profitMarginPerKg.toString());
-    } catch (e) {}
-  }, [profitMarginPerKg]);
-
-  const showNotification = (msg, type = 'success') => {
-    setNotification({ msg, type, id: Date.now() });
-    setTimeout(() => setNotification(null), 4000);
-  };
-
-  // Helper to calculate quoted rate with profit margin per KG ($0.30/kg)
-  const getSellingRate = (baseRate) => {
-    if (baseRate === undefined || baseRate === null) return 0;
-    return Number((Number(baseRate) + profitMarginPerKg).toFixed(2));
-  };
-
-  // Helper to calculate quoted price per Metric Ton (1 MT = 1000 KG)
-  // Quoted price per MT = (baseRate + profitMarginPerKg) * 1000
-  // Explicitly includes the $0.30 USD/KG markup = +$300.00 USD / MT
-  const getSellingRatePerMT = (baseRate) => {
-    if (baseRate === undefined || baseRate === null) return 0;
-    return Number(((Number(baseRate) + profitMarginPerKg) * 1000).toFixed(2));
-  };
-
-  const markupPerMT = Number((profitMarginPerKg * 1000).toFixed(2)); // $300.00 USD / MT markup
-
-  // Auth Functions with credentials & persistence
-  const login = (email, password = '') => {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const found = clients.find(c => c.email.toLowerCase() === cleanEmail);
-    if (found) {
-      if (found.password && password && found.password !== password) {
-        showNotification('Invalid password. Please try again.', 'error');
-        return false;
-      }
-      setCurrentUser(found);
-      setIsAuthModalOpen(false);
-      showNotification(`Welcome back, ${found.name} (${found.companyName})!`, 'success');
-      return true;
-    } else {
-      // Auto-register new account for seamless user experience
-      const newAcc = {
-        id: `USR-${Date.now().toString().slice(-4)}`,
-        name: cleanEmail.split('@')[0],
-        companyName: `${cleanEmail.split('@')[0].toUpperCase()} Exports Ltd`,
-        email: cleanEmail,
-        password: password || '123456',
-        phone: '+254 700 000 000',
-        hcdLicense: `HCDA-${Date.now().toString().slice(-4)}`,
-        kephisReg: `KEPHIS-${Date.now().toString().slice(-4)}`,
-        accountType: 'Produce & Meat Exporter',
-        location: 'Nairobi / JKIA Hub',
-        joinedDate: 'Today'
-      };
-      setClients(prev => [newAcc, ...prev]);
-      setCurrentUser(newAcc);
-      setIsAuthModalOpen(false);
-      showNotification(`Account created & signed in as ${newAcc.email}!`, 'success');
-      return true;
+            .order("airline_name"),
+        ),
+      );
+    } catch (error) {
+      setRatesError(error.message);
+    } finally {
+      setRatesLoading(false);
     }
-  };
+  }, []);
+  useEffect(() => {
+    loadRates();
+  }, [loadRates, isStaff]);
 
-  const signup = ({ name, companyName, email, password, phone, hcdLicense, kephisReg, location }) => {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const existing = clients.find(c => c.email.toLowerCase() === cleanEmail);
-    if (existing) {
-      setCurrentUser(existing);
-      setIsAuthModalOpen(false);
-      showNotification(`Welcome back to Spedire, ${existing.companyName}!`);
-      return existing;
+  const refreshShipments = useCallback(async () => {
+    const userId = userRef.current;
+    if (!userId || !supabase) return;
+    setShipmentsLoading(true);
+    setShipmentsError("");
+    try {
+      const rows = unwrap(
+        await supabase
+          .from("shipments")
+          .select("*, documents(*)")
+          .order("created_at", { ascending: false }),
+      );
+      if (userRef.current === userId) setShipments(rows);
+    } catch (error) {
+      if (userRef.current === userId) setShipmentsError(error.message);
+    } finally {
+      if (userRef.current === userId) setShipmentsLoading(false);
     }
-    const newAcc = {
-      id: `USR-${Date.now().toString().slice(-4)}`,
-      name: name || 'Produce & Meat Exporter',
-      companyName: companyName || 'Kenyan Fresh Produce Ltd',
-      email: cleanEmail,
-      password: password || '123456',
-      phone: phone || '+254 700 000 000',
-      hcdLicense: hcdLicense || 'HCDA-2026',
-      kephisReg: kephisReg || 'KEPHIS-2026',
-      accountType: 'Verified Produce & Meat Exporter',
-      location: location || 'Nairobi, Kenya',
-      joinedDate: 'Today'
-    };
-    setClients(prev => [newAcc, ...prev]);
-    setCurrentUser(newAcc);
-    setIsAuthModalOpen(false);
-    showNotification(`Welcome to Spedire, ${newAcc.companyName}!`);
-    return newAcc;
-  };
+  }, []);
 
-  const logout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem(AUTH_KEY);
-    showNotification('Signed out of Spedire exporter portal.', 'info');
-  };
-
-  // Booking Approval & Advance Bank Payment Prompt State
-  const [approvalPromptShipment, setApprovalPromptShipment] = useState(null);
-  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
-
-  const triggerApprovalNotice = (shipment) => {
-    setApprovalPromptShipment(shipment);
-    setIsApprovalModalOpen(true);
-  };
-
-  const closeApprovalNotice = () => {
-    setIsApprovalModalOpen(false);
-    setApprovalPromptShipment(null);
-  };
-
-  const approveShipment = (shipmentId, paymentMethodChoice = 'USD Bank Wire') => {
-    let targetShipment = null;
-    setShipments(prev =>
-      prev.map(shp => {
-        if (shp.id === shipmentId) {
-          const updated = {
-            ...shp,
-            status: 'Approved • Advance Payment Pending',
-            statusColor: 'emerald',
-            paymentStatus: paymentMethodChoice === 'USD Wire Sent' ? 'USD Bank Wire Initiated' : 'Pending Advance USD Wire',
-            paymentMethod: 'USD Bank Wire',
-            approvedAt: formatProduceDate(new Date())
-          };
-          targetShipment = updated;
-          return updated;
-        }
-        return shp;
-      })
-    );
-
-    if (targetShipment) {
-      triggerApprovalNotice(targetShipment);
+  useEffect(() => {
+    let cancelled = false;
+    setProfile(null);
+    setShipments([]);
+    setShipmentsError("");
+    setShipmentsLoading(false);
+    if (!user || !supabase) return;
+    async function load() {
       try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-      } catch (e) {}
-      showNotification(`Order for AWB ${targetShipment.awbNumber} approved! Please complete advance USD bank payment.`);
-    }
-  };
-
-  const recordBankPayment = (shipmentId, referenceNumber) => {
-    setShipments(prev =>
-      prev.map(shp => {
-        if (shp.id === shipmentId) {
-          return {
-            ...shp,
-            status: 'Advance Payment Initiated / Verifying',
-            statusColor: 'emerald',
-            paymentStatus: 'USD Bank Wire Initiated',
-            paymentMethod: 'USD Bank Wire',
-            bankReference: referenceNumber || `USD-WIRE-${Date.now().toString().slice(-6)}`,
-            paidAt: formatProduceDate(new Date())
-          };
+        let record = unwrap(
+          await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .maybeSingle(),
+        );
+        if (!record) {
+          record = unwrap(
+            await supabase
+              .from("profiles")
+              .upsert(
+                {
+                  id: user.id,
+                  full_name: user.user_metadata?.full_name || "",
+                  company_name: user.user_metadata?.company_name || "",
+                },
+                { onConflict: "id" },
+              )
+              .select()
+              .single(),
+          );
         }
-        return shp;
-      })
-    );
-    try {
-      confetti({
-        particleCount: 100,
-        spread: 80,
-        origin: { y: 0.6 }
-      });
-    } catch (e) {}
-    showNotification(`USD bank wire recorded! Our JKIA cargo accounts desk is verifying your payment.`, 'success');
-  };
-
-  // Shipment & Document Functions
-  const createShipment = (shipmentData, triggerNotice = true) => {
-    const awbRand = Math.floor(10000 + Math.random() * 90000);
-    const airlineCode = shipmentData.airlineCode || 'KQ';
-    const awb = `${airlineCode}-0704-${awbRand}`;
-    const weight = Number(shipmentData.chargeableWeight || shipmentData.grossWeight || 1000);
-    const profit = Number((weight * profitMarginPerKg).toFixed(2));
-    const quotedRate = Number((shipmentData.baseRatePerKg + profitMarginPerKg).toFixed(2));
-
-    const newShipment = {
-      id: `SHP-${Date.now().toString().slice(-6)}`,
-      awbNumber: awb,
-      clientEmail: currentUser?.email || 'guest@export.co.ke',
-      clientCompany: currentUser?.companyName || 'Fresh Produce Exporter',
-      origin: shipmentData.origin || 'NBO',
-      destination: shipmentData.destination || 'AMS',
-      commodity: shipmentData.commodity || 'avocados',
-      commodityName: shipmentData.commodityName || 'Fresh Avocados',
-      airlineId: shipmentData.airlineId || 'KQ',
-      airlineName: shipmentData.airlineName || 'Kenya Airways Cargo',
-      grossWeight: Number(shipmentData.grossWeight || 1000),
-      chargeableWeight: weight,
-      baseRatePerKg: shipmentData.baseRatePerKg,
-      profitMarginPerKg: profitMarginPerKg,
-      quotedRatePerKg: quotedRate,
-      totalProfitUSD: profit,
-      grandTotalUSD: Number(shipmentData.grandTotalUSD || (quotedRate * weight).toFixed(2)),
-      flightNumber: shipmentData.flightNumber || `${airlineCode} ${Math.floor(100 + Math.random() * 900)}`,
-      flightDate: shipmentData.flightDate || 'Tomorrow',
-      status: shipmentData.status || 'Documents Uploaded • AWB Review',
-      statusColor: shipmentData.statusColor || 'emerald',
-      paymentStatus: shipmentData.paymentStatus || 'Pending Advance USD Wire',
-      paymentMethod: 'USD Bank Wire',
-      approvedAt: formatProduceDate(new Date()),
-      createdAt: 'Just Now',
-      documents: shipmentData.documents && shipmentData.documents.length > 0 
-        ? shipmentData.documents 
-        : [
-            {
-              id: `DOC-INV-${Date.now()}`,
-              type: 'commercial_invoice',
-              name: `Commercial Invoice (Consignment #${Math.floor(1000 + Math.random() * 9000)})`,
-              fileName: `Invoice_${shipmentData.commodity || 'produce'}_${weight}kg.pdf`,
-              fileSize: '310 KB',
-              uploadedAt: 'Just Now',
-              verified: true,
-              issuer: currentUser?.companyName || 'Packhouse Exporter',
-              icon: 'FileText'
-            },
-            {
-              id: `DOC-PKL-${Date.now()}`,
-              type: 'packing_list',
-              name: 'Export Packing List & Weight Specification',
-              fileName: `PackingList_${shipmentData.commodity || 'produce'}_${weight}kg.pdf`,
-              fileSize: '240 KB',
-              uploadedAt: 'Just Now',
-              verified: true,
-              issuer: currentUser?.companyName || 'Packhouse Exporter',
-              icon: 'Box'
-            },
-            {
-              id: `DOC-KPH-${Date.now()}`,
-              type: 'kephis',
-              name: `KEPHIS Phyto Certificate (#KE-2026-${Math.floor(1000 + Math.random() * 9000)})`,
-              fileName: `KEPHIS_Certificate_${shipmentData.origin || 'NBO'}.pdf`,
-              fileSize: '410 KB',
-              uploadedAt: 'Just Now',
-              verified: true,
-              issuer: 'KEPHIS Plant Inspection Unit',
-              icon: 'ShieldCheck'
-            },
-            {
-              id: `DOC-AWB-${Date.now()}`,
-              type: 'awb',
-              name: `Air Waybill (BL) - Processing from Origin Docs`,
-              fileName: `AWB_${awb.replace(/-/g, '_')}_Draft.pdf`,
-              fileSize: '380 KB',
-              uploadedAt: 'Processing',
-              verified: false,
-              issuer: 'Spedire Cargo Desk',
-              icon: 'Plane'
-            }
-          ]
+        if (!cancelled) setProfile(record);
+      } catch (error) {
+        if (!cancelled)
+          notify(
+            `Account profile could not be loaded: ${error.message}`,
+            "error",
+          );
+      }
+    }
+    load();
+    refreshShipments();
+    return () => {
+      cancelled = true;
     };
+  }, [user?.id, isStaff, refreshShipments, notify]);
 
-    setShipments(prev => [newShipment, ...prev]);
-    showNotification(`Shipment ${awb} booked! Please note advance payment requirements.`);
-    
-    if (triggerNotice) {
-      triggerApprovalNotice(newShipment);
+  async function login(email, password) {
+    unwrap(
+      await requireBackend().auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      }),
+    );
+    setAuthDialog(null);
+    notify("You’re signed in.");
+  }
+  async function signup({ email, password, name, company }) {
+    const data = unwrap(
+      await requireBackend().auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
+          data: { full_name: name.trim(), company_name: company.trim() },
+        },
+      }),
+    );
+    if (data.session) {
+      setAuthDialog(null);
+      notify("Your account is ready.");
     }
-
-    return newShipment;
-  };
-
-  const uploadDocument = (shipmentId, { type, name, fileName, fileSize, issuer }) => {
-    setShipments(prev =>
-      prev.map(shp => {
-        if (shp.id === shipmentId) {
-          const newDoc = {
-            id: `DOC-${Date.now().toString().slice(-6)}`,
-            type: type || 'other',
-            name: name || 'Export Document',
-            fileName: fileName || `${name.replace(/\s+/g, '_')}.pdf`,
-            fileSize: fileSize || `${Math.floor(200 + Math.random() * 500)} KB`,
-            uploadedAt: 'Just Now',
-            verified: true,
-            issuer: issuer || (currentUser?.companyName || 'JKIA Cargo Agency'),
-            icon: type === 'kephis' ? 'ShieldCheck' : type === 'awb' ? 'FileText' : 'Box'
-          };
-          return {
-            ...shp,
-            documents: [newDoc, ...shp.documents]
-          };
-        }
-        return shp;
-      })
+    return Boolean(data.session);
+  }
+  async function logout() {
+    unwrap(await requireBackend().auth.signOut());
+    setShipments([]);
+    setProfile(null);
+    setAuthDialog(null);
+    window.location.hash = "/quote";
+    notify("You’re signed out.");
+  }
+  async function requestShipment(rate, form, expectedTotal, requestId) {
+    if (!user) throw new Error("Sign in before requesting a booking.");
+    const result = unwrap(
+      await requireBackend().rpc("request_shipment", {
+        p_rate_id: rate.id,
+        p_gross_weight: Number(form.grossWeight),
+        p_ready_date: form.readyDate,
+        p_dimensions:
+          form.dimensionMode === "dimensions"
+            ? {
+                length: Number(form.length),
+                width: Number(form.width),
+                height: Number(form.height),
+                pieces: Number(form.pieces),
+              }
+            : null,
+        p_notes: form.notes || "",
+        p_expected_total: expectedTotal,
+        p_request_id: requestId,
+      }),
     );
-    showNotification(`Document "${name}" uploaded & attached to shipment!`);
-  };
-
-  const deleteDocument = (shipmentId, docId) => {
-    setShipments(prev =>
-      prev.map(shp => {
-        if (shp.id === shipmentId) {
-          return {
-            ...shp,
-            documents: shp.documents.filter(d => d.id !== docId)
-          };
-        }
-        return shp;
-      })
+    await refreshShipments();
+    notify(
+      "Request saved. The cargo desk still needs to confirm space and the final price.",
     );
-    showNotification('Document removed.', 'info');
-  };
-
-  const updateShipmentStatus = (shipmentId, newStatus, newColor = 'emerald') => {
-    setShipments(prev =>
-      prev.map(shp => {
-        if (shp.id === shipmentId) {
-          return { ...shp, status: newStatus, statusColor: newColor };
-        }
-        return shp;
-      })
+    return result;
+  }
+  async function uploadDocument(shipment, file, type) {
+    const client = requireBackend();
+    if (!user || shipment.user_id !== user.id)
+      throw new Error("Only the shipment owner can upload documents.");
+    const extension = await validateFile(file);
+    const id = crypto.randomUUID();
+    const path = `${user.id}/${shipment.id}/${id}.${extension}`;
+    unwrap(
+      await client.storage
+        .from("shipment-documents")
+        .upload(path, file, { contentType: file.type, upsert: false }),
     );
-    showNotification(`Shipment status updated to "${newStatus}"!`);
-  };
-
-  // Rate Editing
-  const updateRate = (id, updatedFields) => {
-    setRates(prevRates => 
-      prevRates.map(item => {
-        if (item.id === id) {
-          const oldRate1000 = item.rate1000kg;
-          const newRate1000 = updatedFields.rate1000kg !== undefined ? updatedFields.rate1000kg : oldRate1000;
-          
-          let changeDirection = item.changeDirection;
-          let changeAmount = item.changeAmount;
-          
-          if (newRate1000 !== oldRate1000) {
-            const diff = Number((newRate1000 - oldRate1000).toFixed(2));
-            changeAmount = diff;
-            changeDirection = diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable';
-          }
-
-          const history = [...(item.history7d || [oldRate1000])];
-          if (newRate1000 !== oldRate1000) {
-            history.push(newRate1000);
-            if (history.length > 7) history.shift();
-          }
-
-          return {
-            ...item,
-            ...updatedFields,
-            changeDirection,
-            changeAmount,
-            history7d: history
-          };
-        }
-        return item;
-      })
-    );
-  };
-
-  const applyBulkAdjustment = ({ airlineId, destinationRegion, commodity, deltaAmount, percentage }) => {
-    setRates(prevRates =>
-      prevRates.map(item => {
-        const airport = AIRPORTS[item.destination];
-        const matchAirline = !airlineId || airlineId === 'all' || item.airlineId === airlineId;
-        const matchRegion = !destinationRegion || destinationRegion === 'all' || airport?.region === destinationRegion;
-        const matchCommodity = !commodity || commodity === 'all' || item.commodity === commodity;
-
-        if (matchAirline && matchRegion && matchCommodity) {
-          const adjust = (val) => {
-            if (!val) return val;
-            let newVal = val;
-            if (deltaAmount) newVal += deltaAmount;
-            if (percentage) newVal += val * (percentage / 100);
-            return Number(Math.max(0.1, newVal).toFixed(2));
-          };
-
-          const oldRate1000 = item.rate1000kg;
-          const newRate1000 = adjust(item.rate1000kg);
-          const diff = Number((newRate1000 - oldRate1000).toFixed(2));
-          
-          const history = [...(item.history7d || [oldRate1000])];
-          if (diff !== 0) {
-            history.push(newRate1000);
-            if (history.length > 7) history.shift();
-          }
-
-          return {
-            ...item,
-            rate45kg: adjust(item.rate45kg),
-            rate100kg: adjust(item.rate100kg),
-            rate300kg: adjust(item.rate300kg),
-            rate500kg: adjust(item.rate500kg),
-            rate1000kg: newRate1000,
-            changeDirection: diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable',
-            changeAmount: diff,
-            history7d: history
-          };
-        }
-        return item;
-      })
-    );
-    showNotification('Bulk produce rate adjustments applied successfully!');
-  };
-
-  const publishDailyRates = () => {
-    const formattedDate = refreshToToday(false);
-
     try {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    } catch (e) {}
-
-    showNotification(`Daily Produce Rates published officially for ${formattedDate}!`);
-  };
-
-  const resetToDefaults = () => {
-    if (window.confirm('Reset all produce & cut flower rates to initial daily defaults? Any custom edits will be reverted.')) {
-      const fresh = calculateDailySpotRates(INITIAL_RATES, new Date());
-      setRates(fresh);
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(LAST_CALC_KEY);
-      showNotification('Fresh produce & cut flower rates restored to daily defaults.', 'info');
+      unwrap(
+        await client.from("documents").insert({
+          id,
+          shipment_id: shipment.id,
+          user_id: user.id,
+          type,
+          file_name: file.name,
+          mime_type: file.type,
+          byte_size: file.size,
+          object_path: path,
+        }),
+      );
+    } catch (error) {
+      const { error: cleanupError } = await client.storage
+        .from("shipment-documents")
+        .remove([path]);
+      if (cleanupError)
+        throw new Error(
+          `${error.message}. An unattached file remains in storage; please contact support.`,
+        );
+      throw error;
     }
-  };
-
-  // Profit Metrics
-  const totalTonnageKg = shipments.reduce((sum, s) => sum + (Number(s.chargeableWeight) || 0), 0);
-  const totalProfitEarnedUSD = shipments.reduce((sum, s) => sum + (Number(s.totalProfitUSD) || (s.chargeableWeight * profitMarginPerKg)), 0);
-
+    await refreshShipments();
+    notify("Document uploaded. It is awaiting staff review.");
+  }
+  async function downloadDocument(doc) {
+    const blob = unwrap(
+      await requireBackend()
+        .storage.from("shipment-documents")
+        .download(doc.object_path),
+    );
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = doc.file_name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(href), 1000);
+  }
+  async function extractDocument(doc) {
+    const { data, error } = await requireBackend().functions.invoke(
+      "document-intake",
+      { body: { documentId: doc.id, consent: true } },
+    );
+    if (error) {
+      let message = error.message;
+      try {
+        message = (await error.context.json()).error || message;
+      } catch {
+        /* transport errors do not have a body */
+      }
+      await refreshShipments();
+      throw new Error(message);
+    }
+    if (data?.error) throw new Error(data.error);
+    await refreshShipments();
+    notify("Fields extracted. Check the source document before using them.");
+  }
+  async function reviewDocument(docId, status, notes) {
+    unwrap(
+      await requireBackend()
+        .from("documents")
+        .update({ review_status: status, review_notes: notes })
+        .eq("id", docId)
+        .select("id")
+        .single(),
+    );
+    await refreshShipments();
+    notify("Document review saved.");
+  }
+  async function updateShipment(shipmentId, status, notes, awbNumber) {
+    unwrap(
+      await requireBackend().rpc("update_shipment_status", {
+        p_shipment_id: shipmentId,
+        p_status: status,
+        p_note: notes,
+        p_awb_number: awbNumber || null,
+      }),
+    );
+    await refreshShipments();
+    notify("Shipment updated.");
+  }
   return (
     <RatesContext.Provider
       value={{
+        isConfigured,
+        session,
+        user,
+        isStaff,
+        authLoading,
+        authDialog,
+        setAuthDialog,
+        profile,
         rates,
-        lastUpdated,
-        refreshToToday,
-        isRefreshing,
-        formatProduceDate,
-        currencyMode,
-        setCurrencyMode,
-        exchangeRate: EXCHANGE_RATE_USD_KES,
-        profitMarginPerKg,
-        setProfitMarginPerKg,
-        getSellingRate,
-        getSellingRatePerMT,
-        markupPerMT,
-        currentUser,
-        setCurrentUser,
-        clients,
-        isAuthModalOpen,
-        setIsAuthModalOpen,
-        authMode,
-        setAuthMode,
+        ratesLoading,
+        ratesError,
+        loadRates,
+        shipments,
+        shipmentsLoading,
+        shipmentsError,
+        refreshShipments,
         login,
         signup,
         logout,
-        shipments,
-        createShipment,
+        requestShipment,
         uploadDocument,
-        deleteDocument,
-        updateShipmentStatus,
-        calculateProduceCostBreakdown,
-        isBookingModalOpen,
-        setIsBookingModalOpen,
-        selectedBookingRoute,
-        setSelectedBookingRoute,
-        openBookingModal,
-        closeBookingModal,
-        approvalPromptShipment,
-        isApprovalModalOpen,
-        triggerApprovalNotice,
-        closeApprovalNotice,
-        approveShipment,
-        recordBankPayment,
-        totalTonnageKg,
-        totalProfitEarnedUSD,
-        isAdminOpen,
-        setIsAdminOpen,
-        activeTab,
-        setActiveTab,
-        selectedRouteForCalc,
-        setSelectedRouteForCalc,
-        selectedRouteForHistory,
-        setSelectedRouteForHistory,
-        selectedShipmentForModal,
-        setSelectedShipmentForModal,
+        downloadDocument,
+        extractDocument,
+        reviewDocument,
+        updateShipment,
         notification,
-        showNotification,
-        updateRate,
-        applyBulkAdjustment,
-        publishDailyRates,
-        resetToDefaults,
-        airlines: AIRLINES,
-        airports: AIRPORTS,
-        commodities: COMMODITY_TYPES
+        notify,
       }}
     >
       {children}
     </RatesContext.Provider>
   );
-};
-
-export const useRates = () => {
-  const context = useContext(RatesContext);
-  if (!context) {
-    throw new Error('useRates must be used within a RatesProvider');
-  }
-  return context;
-};
+}

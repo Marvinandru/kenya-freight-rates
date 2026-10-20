@@ -1,0 +1,253 @@
+{
+  "airports": {
+    "NBO": {
+      "code": "NBO",
+      "city": "Nairobi",
+      "name": "Jomo Kenyatta International (JKIA)",
+      "country": "Kenya",
+      "region": "africa"
+    },
+    "MBA": {
+      "code": "MBA",
+      "city": "Mombasa",
+      "name": "Moi International Airport",
+      "country": "Kenya",
+      "region": "africa"
+    },
+    "EDL": {
+      "code": "EDL",
+      "city": "Eldoret",
+      "name": "Eldoret International Airport",
+      "country": "Kenya",
+      "region": "africa"
+    },
+    "KWI": {
+      "code": "KWI",
+      "city": "Kuwait City",
+      "name": "Kuwait International Airport",
+      "country": "Kuwait",
+      "region": "middle_east"
+    },
+    "MCT": {
+      "code": "MCT",
+      "city": "Muscat",
+      "name": "Muscat International Airport",
+      "country": "Oman",
+      "region": "middle_east"
+    },
+    "DXB": {
+      "code": "DXB",
+      "city": "Dubai",
+      "name": "Dubai International Airport",
+      "country": "UAE",
+      "region": "middle_east"
+    },
+    "SHJ": {
+      "code": "SHJ",
+      "city": "Sharjah",
+      "name": "Sharjah International Airport",
+      "country": "UAE",
+      "region": "middle_east"
+    },
+    "DOH": {
+      "code": "DOH",
+      "city": "Doha",
+      "name": "Hamad International Airport",
+      "country": "Qatar",
+      "region": "middle_east"
+    },
+    "RUH": {
+      "code": "RUH",
+      "city": "Riyadh",
+      "name": "King Khalid International",
+      "country": "Saudi Arabia",
+      "region": "middle_east"
+    },
+    "JED": {
+      "code": "JED",
+      "city": "Jeddah",
+      "name": "King Abdulaziz International",
+      "country": "Saudi Arabia",
+      "region": "middle_east"
+    },
+    "AMS": {
+      "code": "AMS",
+      "city": "Amsterdam",
+      "name": "Schiphol Airport",
+      "country": "Netherlands",
+      "region": "europe"
+    },
+    "LHR": {
+      "code": "LHR",
+      "city": "London",
+      "name": "Heathrow Airport",
+      "country": "United Kingdom",
+      "region": "europe"
+    },
+    "CDG": {
+      "code": "CDG",
+      "city": "Paris",
+      "name": "Charles de Gaulle Airport",
+      "country": "France",
+      "region": "europe"
+    },
+    "BRU": {
+      "code": "BRU",
+      "city": "Brussels",
+      "name": "Brussels National Airport",
+      "country": "Belgium",
+      "region": "europe"
+    },
+    "FRA": {
+      "code": "FRA",
+      "city": "Frankfurt",
+      "name": "Frankfurt Main Airport",
+      "country": "Germany",
+      "region": "europe"
+    },
+    "MXP": {
+      "code": "MXP",
+      "city": "Milan",
+      "name": "Malpensa International Airport",
+      "country": "Italy",
+      "region": "europe"
+    },
+    "FCO": {
+      "code": "FCO",
+      "city": "Rome",
+      "name": "Leonardo da Vinci–Fiumicino",
+      "country": "Italy",
+      "region": "europe"
+    },
+    "BOM": {
+      "code": "BOM",
+      "city": "Mumbai",
+      "name": "Chhatrapati Shivaji Maharaj",
+      "country": "India",
+      "region": "asia"
+    },
+    "CAN": {
+      "code": "CAN",
+      "city": "Guangzhou",
+      "name": "Baiyun International",
+      "country": "China",
+      "region": "asia"
+    },
+    "JFK": {
+      "code": "JFK",
+      "city": "New York",
+      "name": "John F. Kennedy International",
+      "country": "United States",
+      "region": "americas"
+    },
+    "JNB": {
+      "code": "JNB",
+      "city": "Johannesburg",
+      "name": "O.R. Tambo International",
+      "country": "South Africa",
+      "region": "africa"
+    },
+    "EBB": {
+      "code": "EBB",
+      "city": "Entebbe",
+      "name": "Entebbe International",
+      "country": "Uganda",
+      "region": "africa"
+    },
+    "BZV": {
+      "code": "BZV",
+      "city": "Brazzaville",
+      "name": "Maya-Maya International Airport",
+      "country": "Republic of the Congo",
+      "region": "africa"
+    }
+  },
+  "commodities": [
+    {
+      "id": "flowers",
+      "name": "Fresh Cut Flowers (Roses, Carnations, Summer Flowers)"
+    },
+    {
+      "id": "avocado",
+      "name": "Fresh Avocados (Hass & Fuerte)"
+    },
+    {
+      "id": "chillies",
+      "name": "Fresh Chillies (Bird’s Eye, Bullet, Habanero)"
+    },
+    {
+      "id": "herbs",
+      "name": "Fresh Culinary Herbs (Basil, Mint, Coriander, Rosemary)"
+    },
+    {
+      "id": "mangoes",
+      "name": "Fresh Mangoes (Apple, Ngowe, Kent)"
+    },
+    {
+      "id": "meat",
+      "name": "Regular Meat (Chilled Halal Goat, Lamb & Beef)"
+    },
+    {
+      "id": "seafood",
+      "name": "Sea Food (Fresh Fish, Red Snapper, Lobster & Crab — UAE Express)"
+    },
+    {
+      "id": "passion",
+      "name": "Fresh Passion Fruit (Purple & Yellow)"
+    },
+    {
+      "id": "pineapple",
+      "name": "Fresh Pineapples (Smooth Cayenne, MD2)"
+    }
+  ],
+  "airlines": [
+    {
+      "id": "QR",
+      "name": "Qatar Airways Cargo"
+    },
+    {
+      "id": "KQ",
+      "name": "Kenya Airways Cargo"
+    },
+    {
+      "id": "EK",
+      "name": "Emirates SkyCargo"
+    },
+    {
+      "id": "SV",
+      "name": "Saudia Cargo"
+    },
+    {
+      "id": "KL",
+      "name": "KLM Cargo"
+    },
+    {
+      "id": "AF",
+      "name": "Air France Cargo"
+    },
+    {
+      "id": "AI",
+      "name": "Air India Cargo"
+    },
+    {
+      "id": "ET",
+      "name": "Ethiopian Airlines Cargo"
+    },
+    {
+      "id": "SN",
+      "name": "Brussels Airlines Cargo"
+    },
+    {
+      "id": "SOL",
+      "name": "Solit Air"
+    },
+    {
+      "id": "FX",
+      "name": "FedEx Express"
+    },
+    {
+      "id": "DH",
+      "name": "DHL Aviation"
+    }
+  ]
+}

@@ -1,248 +1,198 @@
-import React, { useState } from 'react';
-import { useRates } from '../context/RatesContext';
-import { 
-  X, 
-  UserPlus, 
-  LogIn, 
-  Building2, 
-  Mail, 
-  Phone, 
-  ShieldCheck, 
-  FileText, 
-  CheckCircle2,
-  Sparkles,
-  Leaf,
-  Lock
-} from 'lucide-react';
-
-export const AuthModal = () => {
-  const { 
-    isAuthModalOpen, 
-    setIsAuthModalOpen, 
-    authMode, 
-    setAuthMode, 
-    login, 
-    signup, 
-    clients, 
-    setCurrentUser 
+import React, { useState } from "react";
+import { ArrowRight, Mail } from "lucide-react";
+import { useRates } from "../context/RatesContext";
+import { requireBackend, unwrap } from "../lib/supabase";
+import { Modal } from "../ui/Modal";
+export function AuthModal() {
+  const {
+    authDialog: mode,
+    setAuthDialog,
+    login,
+    signup,
+    isConfigured,
+    notify,
   } = useRates();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [phone, setPhone] = useState('+254 7');
-  const [hcdLicense, setHcdLicense] = useState('');
-  const [kephisReg, setKephisReg] = useState('');
-  const [location, setLocation] = useState('Nairobi, Kenya');
-
-  if (!isAuthModalOpen) return null;
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (authMode === 'login') {
-      if (!email.trim()) {
-        alert('Please enter your email address');
-        return;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  if (!mode) return null;
+  function changeMode(next) {
+    setError("");
+    setMessage("");
+    setPassword("");
+    setAuthDialog(next);
+  }
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      if (mode === "login") await login(email, password);
+      if (mode === "signup") {
+        const signedIn = await signup({ email, password, name, company });
+        if (!signedIn)
+          setMessage(
+            "Check your inbox for a confirmation link. After confirming your email, return here to sign in. If you already have an account, sign in instead.",
+          );
       }
-      login(email, password);
-    } else {
-      if (!email.trim() || !companyName.trim()) {
-        alert('Please fill in required fields (Company Name and Email)');
-        return;
+      if (mode === "reset") {
+        unwrap(
+          await requireBackend().auth.resetPasswordForEmail(email.trim(), {
+            redirectTo: `${window.location.origin}${window.location.pathname}`,
+          }),
+        );
+        setMessage(
+          "If an account exists for this email, a password reset link will arrive shortly.",
+        );
       }
-      signup({ name, companyName, email, password, phone, hcdLicense, kephisReg, location });
+      if (mode === "recovery") {
+        unwrap(await requireBackend().auth.updateUser({ password }));
+        setAuthDialog(null);
+        notify("Your password has been updated.");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
     }
-  };
-
-  const handleQuickLogin = (client) => {
-    setCurrentUser(client);
-    setIsAuthModalOpen(false);
-  };
-
+  }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="glass-panel w-full max-w-md rounded-3xl border border-slate-700 shadow-2xl overflow-hidden bg-slate-950">
-        {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Leaf className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-base">
-                {authMode === 'login' ? 'Exporter Sign In' : 'Create Exporter Account'}
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Access your Air Waybills (BL), KEPHIS certificates & Packing lists
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsAuthModalOpen(false)}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <Modal
+      title={
+        mode === "signup"
+          ? "Create your exporter account"
+          : mode === "reset"
+            ? "Reset your password"
+            : mode === "recovery"
+              ? "Choose a new password"
+              : "Welcome back"
+      }
+      onClose={() => !busy && setAuthDialog(null)}
+    >
+      <p className="muted">
+        {mode === "signup"
+          ? "Save your shipments and keep your export documents together."
+          : "Continue to your shipments and documents."}
+      </p>
+      {!isConfigured && (
+        <div className="notice warning">
+          Accounts are not available in this preview. The project needs a
+          Supabase connection before you can register or sign in.
         </div>
-
-        {/* Tab Toggle */}
-        <div className="grid grid-cols-2 p-1.5 bg-slate-900 border-b border-slate-800 text-xs font-semibold">
-          <button
-            onClick={() => setAuthMode('login')}
-            className={`py-2 rounded-xl transition-all ${
-              authMode === 'login'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Sign In to Portal
-          </button>
-          <button
-            onClick={() => setAuthMode('signup')}
-            className={`py-2 rounded-xl transition-all ${
-              authMode === 'signup'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            New Exporter Register
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
-          {authMode === 'signup' && (
-            <>
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Company / Farm Packhouse Name *</label>
-                <div className="relative">
-                  <Building2 className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Naivasha Green Valley Exporters Ltd"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Contact Person Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Marvin Andrew"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 text-[11px] mb-1">HCDA License No.</label>
-                  <input
-                    type="text"
-                    value={hcdLicense}
-                    onChange={(e) => setHcdLicense(e.target.value)}
-                    placeholder="HCDA-EXP-2026"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 text-[11px] mb-1">KEPHIS Reg No.</label>
-                  <input
-                    type="text"
-                    value={kephisReg}
-                    onChange={(e) => setKephisReg(e.target.value)}
-                    placeholder="KEPHIS-EX-8890"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">Phone / WhatsApp Number</label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          <div>
-            <label className="block text-slate-300 font-semibold mb-1">Exporter Email Address *</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+      )}
+      <form onSubmit={submit} className="form-stack">
+        {mode === "signup" && (
+          <>
+            <label>
+              Full name
               <input
-                type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="export@freshproduce.co.ke"
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+                autoComplete="name"
+                maxLength={120}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-slate-300 font-semibold">Password {authMode === 'signup' && '*'}</label>
-              {authMode === 'login' && (
-                <span className="text-[10px] text-slate-500">Any password or default demo</span>
-              )}
-            </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            </label>
+            <label>
+              Company or farm
               <input
-                type="password"
-                required={authMode === 'signup'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={authMode === 'signup' ? 'Create a secure password' : 'Enter password'}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+                required
+                autoComplete="organization"
+                maxLength={160}
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
               />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/25 transition-all text-xs"
-          >
-            {authMode === 'login' ? 'Sign In & Access Spedire Portal' : 'Register & Create Spedire Account'}
-          </button>
-        </form>
-
-        {/* Demo Fast Login Profiles */}
-        <div className="p-4 bg-slate-900/60 border-t border-slate-800 text-xs">
-          <span className="text-[10px] text-slate-400 block mb-2 font-semibold uppercase tracking-wider">
-            Quick Demo Exporter Profiles:
-          </span>
-          <div className="space-y-1.5">
-            {clients.map(c => (
+            </label>
+          </>
+        )}
+        {mode !== "recovery" && (
+          <label>
+            Email address
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@company.com"
+            />
+          </label>
+        )}
+        {mode !== "reset" && (
+          <label>
+            Password
+            <input
+              type="password"
+              required
+              minLength={mode === "login" ? 1 : 10}
+              maxLength={128}
+              autoComplete={
+                mode === "login" ? "current-password" : "new-password"
+              }
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {mode !== "login" && (
+              <span className="field-hint">Use at least 10 characters.</span>
+            )}
+          </label>
+        )}
+        {error && (
+          <p className="notice error" role="alert">
+            {error}
+          </p>
+        )}
+        {message && (
+          <p className="notice success" role="status">
+            <Mail size={18} />
+            {message}
+          </p>
+        )}
+        <button
+          className="button primary full"
+          disabled={busy || !isConfigured || Boolean(message)}
+        >
+          {busy
+            ? "Please wait…"
+            : mode === "signup"
+              ? "Create account"
+              : mode === "reset"
+                ? "Send reset link"
+                : mode === "recovery"
+                  ? "Update password"
+                  : "Sign in"}
+          <ArrowRight size={17} />
+        </button>
+      </form>
+      {mode !== "recovery" && (
+        <div className="auth-links">
+          {mode === "login" ? (
+            <>
               <button
-                key={c.id}
-                onClick={() => handleQuickLogin(c)}
-                className="w-full text-left p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-between text-[11px] text-slate-300 transition-colors"
+                className="text-button"
+                onClick={() => changeMode("reset")}
               >
-                <div>
-                  <span className="font-bold text-white block">{c.companyName}</span>
-                  <span className="text-slate-500">{c.email}</span>
-                </div>
-                <span className="text-emerald-400 font-medium">Switch ➔</span>
+                Forgot password?
               </button>
-            ))}
-          </div>
+              <button
+                className="text-button"
+                onClick={() => changeMode("signup")}
+              >
+                Create an account
+              </button>
+            </>
+          ) : (
+            <button className="text-button" onClick={() => changeMode("login")}>
+              Back to sign in
+            </button>
+          )}
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
-};
+}
