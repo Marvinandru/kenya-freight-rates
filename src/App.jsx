@@ -7,6 +7,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
+  Sun,
   Package,
   Plane,
   Plus,
@@ -19,6 +21,7 @@ import { QuotePage } from "./pages/QuotePage";
 import { ShipmentsPage } from "./pages/ShipmentsPage";
 import { RateManager } from "./pages/RateManager";
 import logo from "./assets/spedire-logo.jpg";
+import { useTheme } from "./lib/useTheme";
 
 class ErrorBoundary extends React.Component {
   state = { failed: false };
@@ -127,6 +130,7 @@ function OperationsPage() {
   );
 }
 function Workspace() {
+  const { theme, toggleTheme } = useTheme();
   const {
     user,
     isStaff,
@@ -278,6 +282,23 @@ function Workspace() {
             <span>Fresh cargo. One clear journey.</span>
           </div>
           <div className="topbar-right">
+            <button
+              className="icon-button theme-toggle"
+              type="button"
+              onClick={toggleTheme}
+              aria-label={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              title={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <span className="origin-label">
               <i />
               Nairobi, Kenya

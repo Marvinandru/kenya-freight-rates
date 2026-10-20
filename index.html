@@ -2,6 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (() => {
+        let saved;
+        try {
+          saved = localStorage.getItem("spedire-theme");
+        } catch {}
+        document.documentElement.dataset.theme =
+          saved === "dark" || saved === "light"
+            ? saved
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+      })();
+    </script>
     <link rel="icon" type="image/jpeg" href="/spedire-logo.jpg" />
     <link rel="apple-touch-icon" href="/spedire-logo.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
